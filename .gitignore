@@ -1,0 +1,13 @@
+/tmp/
+/docs/superpowers/
+/.superpowers/
+_build/
+deps/
+node_modules/
+.venv/
+__pycache__/
+.pytest_cache/
+erl_crash.dump
+.elixir_ls/
+_build_*/
+/elixir/_variants/
