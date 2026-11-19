@@ -22,9 +22,10 @@ defmodule Koans.Ch03.GenServerCallsAndTimeoutsTest do
   reply that arrives after `GenServer.call` gave up is dropped rather than left in the
   caller's mailbox: OTP's `gen_server:call` docs say so, Elixir's `GenServer.call` docs still
   describe the older behaviour, and it holds for calls, not hand-made requests (chapter 1).
-  Move slow work into a `Task` that sends its result back to `handle_info`. A server that
-  calls itself exits with `:calling_self`; two servers that call each other each wait for
-  the other, until one call times out or, with `:infinity`, for ever.
+  Move slow work into a `Task` that sends its result back to `handle_info`. OTP's
+  `gen_server:call` refuses a call to the caller's own server: the caller exits with
+  `:calling_self`. Two servers that call each other each wait for the other until one call
+  times out, or for ever with `:infinity`.
 
   Read more: https://hexdocs.pm/elixir/1.19.5/GenServer.html,
   https://hexdocs.pm/elixir/1.19.5/Task.html,
@@ -32,9 +33,9 @@ defmodule Koans.Ch03.GenServerCallsAndTimeoutsTest do
   """
   use Koans
 
-  koan "A call gives up after 0 ms while the server is still busy with it. Name the reason the caller exits with, then what is in its mailbox once the server has replied late." do
+  koan "A call gives up after 10 ms while the server is still busy with it. Name the reason the caller exits with, then what is in its mailbox once the server has replied late." do
     server = start_supervised!(Course.Ch03.Slow)
-    {reason, {GenServer, :call, _args}} = catch_exit(GenServer.call(server, :slow, 0))
+    {reason, {GenServer, :call, _args}} = catch_exit(GenServer.call(server, :slow, 10))
     send(server, :release)
     :pong = GenServer.call(server, :ping)
 
@@ -66,21 +67,21 @@ defmodule Koans.Ch03.GenServerCallsAndTimeoutsTest do
     assert Koans.Trace.last_message("03_cart_self_call") == "{:\"$gen_cast\", {:add, 3}}"
   end
 
-  koan "Read traces/03_bad_return.exs.trace. Which server stopped, and which request was it handling?" do
+  koan "Read traces/03_bad_return.exs.trace. Which server stopped, which request was it handling, and what does the report's ** (stop) line say stopped it, in the report's own wording?" do
     assert Koans.Trace.process("03_bad_return") == "Counter"
     assert Koans.Trace.last_message("03_bad_return") == ":incr"
+    assert Koans.Trace.stop_reason("03_bad_return") == "bad return value: {:ok, 1}"
   end
 
-  koan "Read traces/03_transfer_cycle.exs.trace. Which request was the first server handling, and which two course lines call each other?" do
-    assert Koans.Trace.last_message("03_transfer_cycle") ==
-             "{:\"$gen_cast\", {:transfer, :bob, 10}}"
+  koan "Read traces/03_transfer_cycle.exs.trace. Which request was the first server to stop handling, and which two course lines call each other?" do
+    assert Koans.Trace.last_message("03_transfer_cycle") == "{:deposit, :alice, 10}"
 
     assert Koans.Trace.frames("03_transfer_cycle") ==
-             [{"traces/03_transfer_cycle.exs", 12}, {"traces/03_transfer_cycle.exs", 18}]
+             [{"traces/03_transfer_cycle.exs", 18}, {"traces/03_transfer_cycle.exs", 12}]
   end
 
   koan "Read koans/review/03_stock.ex. Write :fine, or the line number of the bug." do
-    verdict("03_stock.ex", 28, "0e49e724bd,13821b62b0,272645888a,7d8435db50,89ce047ee6,9299221691,a23535f9f2,b5e41c9a31,cf18b447d7,fe643d9e24", "d6789a0b29")
+    verdict("03_stock.ex", 27, "05f89d8bd7,0e49e724bd,13821b62b0,4239a00211,5877fa141a,7d8435db50,89ce047ee6,9299221691,a23535f9f2,fe643d9e24", "b15f850714")
   end
 
   koan "Fix the bug in koans/review/03_stock.ex in place. The hidden checks name what still fails." do
@@ -88,7 +89,7 @@ defmodule Koans.Ch03.GenServerCallsAndTimeoutsTest do
   end
 
   koan "Read koans/review/03_rates.ex. Write :fine, or the line number of the bug." do
-    verdict("03_rates.ex", 26, "eb52fa55e9", "c01036cd8c")
+    verdict("03_rates.ex", 25, "bbdf373663", "f11800e2ff")
   end
 
   koan "Fix the bug in koans/review/03_rates.ex in place. The hidden checks name what still fails." do
@@ -112,7 +113,7 @@ defmodule Koans.Ch03.GenServerCallsAndTimeoutsTest do
   end
 
   koan "Read koans/review/03_registry.ex. Write :fine, or the line number of the bug." do
-    verdict("03_registry.ex", 23, "05462e735c,0891b258a5,2812273705,6841e1c8f4", "8c5292bd9e")
+    verdict("03_registry.ex", 23, "05462e735c,0891b258a5,2812273705,6841e1c8f4,7d0b131be2", "8c5292bd9e")
   end
 
   koan "Fix the bug in koans/review/03_registry.ex in place. The hidden checks name what still fails." do

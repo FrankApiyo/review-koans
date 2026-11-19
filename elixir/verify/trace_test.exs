@@ -64,6 +64,29 @@ defmodule Verify.TraceTest do
     assert with_trace(called, &Trace.last_message/1) == ~s({:bump, "two"})
   end
 
+  test "stop_reason is the first report's stop line, without its marker" do
+    stopped = """
+    [error] GenServer Counter terminating
+    ** (stop) bad return value: {:ok, 1}
+    Last message (from #PID<0.94.0>): :incr
+    [error] GenServer :bob terminating
+    ** (stop) exited in: GenServer.call(:alice, :balance, 300)
+    """
+
+    assert with_trace(stopped, &Trace.stop_reason/1) == "bad return value: {:ok, 1}"
+  end
+
+  test "stop_reason is nil without a stop line, and raises on a pid" do
+    assert with_trace("** (exit) :boom\n", &Trace.stop_reason/1) == nil
+
+    assert_raise ArgumentError, ~r/changes on every capture/, fn ->
+      with_trace(
+        "** (stop) exited in: GenServer.call(#PID<0.1.0>, :x, 5000)\n",
+        &Trace.stop_reason/1
+      )
+    end
+  end
+
   test "init_failure is the module and line of the first init frame in a start error" do
     start_error = """
     {:error,

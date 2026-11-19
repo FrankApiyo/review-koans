@@ -9,13 +9,13 @@ defmodule Account do
 
   @impl true
   def handle_cast({:transfer, to, amount}, {name, balance}) do
-    :ok = GenServer.call(to, {:deposit, name, amount}, 300)
+    :ok = GenServer.call(to, {:deposit, name, amount}, :infinity)
     {:noreply, {name, balance - amount}}
   end
 
   @impl true
   def handle_call({:deposit, payer, amount}, _from, {name, balance}) do
-    _payer_balance = GenServer.call(payer, :balance, :infinity)
+    _payer_balance = GenServer.call(payer, :balance, 300)
     {:reply, :ok, {name, balance + amount}}
   end
 
@@ -40,7 +40,8 @@ end
     config: %{script: self()}
   })
 
-# Only the first call has a timeout, so the two servers always stop in the same order.
+# Only :bob's call back has a timeout, and :alice is already blocked calling :bob when it
+# starts, so :bob always times out first and :alice stops with its reason.
 {:ok, alice} = Account.start(:alice, 100)
 {:ok, bob} = Account.start(:bob, 0)
 refs = [Process.monitor(alice), Process.monitor(bob)]

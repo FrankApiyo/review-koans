@@ -1,8 +1,7 @@
 defmodule Review.Ch03.Rates do
   @moduledoc """
-  Caches exchange rates for the whole app. `refresh/1` asks `fetch`, a call to a remote API
-  that can take seconds, for new rates; `get/1` returns the rates held now, and every request
-  that prices something calls it.
+  Caches exchange rates for the app. `refresh/1` asks `fetch`, a call to a remote API, for
+  new rates; `get/1` returns the rates held now.
   """
 
   use GenServer

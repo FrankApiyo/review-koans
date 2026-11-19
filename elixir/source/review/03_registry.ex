@@ -27,11 +27,14 @@ defmodule Review.Ch03.Registry do
   def handle_call(:count, _from, sessions), do: {:reply, map_size(sessions), sessions}
   # >>> fix
   # also: Process.monitor(pid) — the monitor whose :DOWN nobody handles
+  # also: Map.put(sessions, pid, ref) — the session added here is never removed
   # === fixed
 
   @impl true
   def handle_info({:DOWN, _ref, :process, pid, _reason}, sessions),
     do: {:noreply, Map.delete(sessions, pid)}
+
+  def handle_info(_message, sessions), do: {:noreply, sessions}
   # === alt: find the session by its monitor ref
 
   @impl true

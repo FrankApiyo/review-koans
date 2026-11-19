@@ -29,4 +29,6 @@ defmodule Review.Ch03.Registry do
   @impl true
   def handle_info({:DOWN, _ref, :process, pid, _reason}, sessions),
     do: {:noreply, Map.delete(sessions, pid)}
+
+  def handle_info(_message, sessions), do: {:noreply, sessions}
 end

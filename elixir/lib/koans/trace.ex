@@ -13,6 +13,7 @@ defmodule Koans.Trace do
   @header ~r/^\[error\] (.*)$/m
   @named_server ~r/^GenServer (.+) terminating$/
   @last_message ~r/^Last message(?: \(from [^)]*\))?: (.*)$/m
+  @stop_reason ~r/^\*\* \(stop\) (.*)$/m
   @event ~r/"event" => "([^"]*)"/
   @init_frame ~r/\{([A-Z]\w*(?:\.[A-Z]\w*)*), :init, 1, \[file: ~c"traces\/[^"]*", line: (\d+)\]\}/
   @varying ~r/#PID<|#Reference<|#Port<|phx-/
@@ -40,6 +41,10 @@ defmodule Koans.Trace do
 
   @spec last_message(String.t()) :: String.t() | nil
   def last_message(name), do: name |> read!() |> first(@last_message) |> checked(name)
+
+  @doc "The first report's `** (stop)` line, as the report words it, without the marker."
+  @spec stop_reason(String.t()) :: String.t() | nil
+  def stop_reason(name), do: name |> read!() |> first(@stop_reason) |> checked(name)
 
   @spec process(String.t()) :: String.t() | nil
   def process(name) do

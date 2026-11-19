@@ -1,8 +1,7 @@
 defmodule Review.Ch03.Stock do
   @moduledoc """
   A server holds how many units of one item are left. `reserve/2` takes `k` units and returns
-  `:ok`, or `{:error, :out_of_stock}` when fewer than `k` are left. During a sale, many
-  customers reserve the same item at once.
+  `:ok`, or `{:error, :out_of_stock}` when fewer than `k` are left.
   """
 
   use GenServer
