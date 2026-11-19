@@ -1,0 +1,8 @@
+exit 1
+--- stdout
+{333, 1}
+--- stderr
+** (ArithmeticError) bad argument in arithmetic expression: div(1000, 0)
+    :erlang.div(1000, 0)
+    traces/00_divide.exs:3: Bill.split/2
+    traces/00_divide.exs:9: (file)
