@@ -7,12 +7,17 @@ defmodule Review.Ch01.ParallelMap do
   def map(list, fun) do
     # >>> fix
     # also: receive do — a reviewer points at the receive that waits for a reply no worker sends
+    # also: {^pid, result} -> result — a reviewer points at the clause that matches a reply no worker sends
     pids = Enum.map(list, fn x -> spawn(fn -> send(self(), {self(), fun.(x)}) end) end)
     Enum.map(pids, &await/1)
     # === fixed
     caller = self()
     pids = Enum.map(list, fn x -> spawn(fn -> send(caller, {self(), fun.(x)}) end) end)
     Enum.map(pids, &await/1)
+    # === alt: one Task per item, awaited in input order
+    list
+    |> Enum.map(fn x -> Task.async(fn -> fun.(x) end) end)
+    |> Task.await_many()
     # === wrong: refuses — refuses to map at all
     _ = {list, fun}
     raise ArgumentError, "parallel map is switched off"

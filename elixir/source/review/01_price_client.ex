@@ -38,6 +38,20 @@ defmodule Review.Ch01.PriceClient do
 
     receive do
       {:price, price} -> {:ok, price}
+    # === wrong: partial — drops only stale replies before asking, so one still on its way gets through
+    drop_stale = fn drop_stale ->
+      receive do
+        {:price, _price} -> drop_stale.(drop_stale)
+      after
+        0 -> :ok
+      end
+    end
+
+    drop_stale.(drop_stale)
+    send(server, {:price, sku, {self(), :price}})
+
+    receive do
+      {:price, price} -> {:ok, price}
     # <<<
     after
       timeout -> {:error, :timeout}

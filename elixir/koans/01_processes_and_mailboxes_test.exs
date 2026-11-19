@@ -15,10 +15,11 @@ defmodule Koans.Ch01.ProcessesAndMailboxesTest do
   result sent just before its sender exits always arrives before the `:DOWN`.
 
   A common mistake: flushing the mailbox, or adding `after`, instead of tagging the request.
-  A flush throws away messages meant for other code; a timeout turns a crash into `:timeout`
-  and loses the reason. Put a `make_ref()` in the request and pin it in the `receive`. OTP's
-  `GenServer.call` tags its requests for the same reason (chapter 3). The stale reply still
-  sits in the mailbox, so a long-lived caller must drop it later or not care.
+  A flush throws away messages meant for other code and misses a reply still on its way; a
+  timeout turns a crash into `:timeout` and loses the reason. Put a `make_ref()` in the request
+  and pin it in the `receive`. With a hand-made ref, the late reply still sits in the mailbox,
+  so a long-lived caller must drop it later or not care. OTP's `GenServer.call` tags its
+  requests too (chapter 3).
 
   Read more: https://hexdocs.pm/elixir/1.19.5/processes.html,
   https://hexdocs.pm/elixir/1.19.5/Process.html,
@@ -110,7 +111,7 @@ defmodule Koans.Ch01.ProcessesAndMailboxesTest do
   end
 
   koan "Read koans/review/01_parallel_map.ex. Write :fine, or the line number of the bug." do
-    verdict("01_parallel_map.ex", __, "0f0f29aaea,724d4f7fbd,c3f74e47ec", "907572b74c")
+    verdict("01_parallel_map.ex", __, "0f0f29aaea,724d4f7fbd,ac4bc1a911,c3f74e47ec", "907572b74c")
   end
 
   koan "Fix the bug in koans/review/01_parallel_map.ex in place. The hidden checks name what still fails." do

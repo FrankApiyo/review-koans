@@ -21,7 +21,9 @@ defmodule Checks.Ch01.PriceClient do
                   Hidden.isolated(&fetch_beside_unrelated/0)
        end},
       {:exploit, "a late reply to an abandoned request",
-       fn -> assert {:ok, {:ok, 120}} = Hidden.isolated(&fetch_after_late_reply/0) end}
+       fn -> assert {:ok, {:ok, 120}} = Hidden.isolated(&fetch_after_late_reply/0) end},
+      {:exploit, "a late reply still on its way when the next request is sent",
+       fn -> assert {:ok, {:ok, 120}} = Hidden.isolated(&fetch_with_late_reply_in_flight/0) end}
     ]
   end
 
@@ -48,6 +50,27 @@ defmodule Checks.Ch01.PriceClient do
 
     true = Hidden.wait_until(fn -> queued(self()) > 0 end)
     PriceClient.fetch(server, "apple")
+  end
+
+  # The holder releases the slow lookup only once the next request waits in the server's
+  # mailbox, so the late reply is sent after that request and before its answer.
+  defp fetch_with_late_reply_in_flight do
+    holder = spawn_link(&hold_slow_lookup/0)
+    server = PriceClient.start(lookup(holder))
+    send(holder, {:server, server})
+    {:error, :timeout} = PriceClient.fetch(server, "slow", 0)
+    PriceClient.fetch(server, "apple")
+  end
+
+  defp hold_slow_lookup do
+    receive do
+      {:server, server} ->
+        receive do
+          :slow_started ->
+            true = Hidden.wait_until(fn -> queued(server) > 0 end)
+            send(server, :release)
+        end
+    end
   end
 
   defp lookup(caller) do

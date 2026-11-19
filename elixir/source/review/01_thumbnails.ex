@@ -31,7 +31,7 @@ defmodule Review.Ch01.Thumbnails do
     receive do
       {:DOWN, ^ref, :process, ^pid, {:done, thumb}} -> {:ok, thumb}
       {:DOWN, ^ref, :process, ^pid, reason} -> {:error, reason}
-    # === wrong: refuses — starts the worker but never waits for it
+    # === wrong: refuses — waits for the worker, then reports it busy
     spawn(fn -> send(parent, {:done, Thumb.resize!(image)}) end)
 
     receive do
