@@ -1,0 +1,2 @@
+# Clock-ban exemptions for tests/test_elixir.py: path | stripped line text | reason.
+# Allow only a timer that cannot race: it always fires, or it only turns a hang into a failure.
