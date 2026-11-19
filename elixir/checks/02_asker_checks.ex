@@ -41,8 +41,8 @@ defmodule Checks.Ch02.Asker do
     monitors
   end
 
-  # The caller is suspended until the answer and the server's :DOWN have both reached it,
-  # so it reads them together.
+  # The server sends the answer and then exits, so its :DOWN follows the answer. The caller
+  # is suspended until both have reached it, so it reads them together.
   defp ask_dying_server do
     test = self()
     server = spawn_link(fn -> forward_one(test) end)
@@ -58,8 +58,7 @@ defmodule Checks.Ch02.Asker do
     receive do
       {:forwarded, ^caller, ref, question} ->
         :erlang.suspend_process(caller)
-        send(caller, {:answer, ref, question * question})
-        stop(server)
+        answer_and_exit(server, caller, ref, question * question)
         true = Hidden.wait_until(fn -> queued(caller) > 2 end)
         :erlang.resume_process(caller)
     end
@@ -85,16 +84,16 @@ defmodule Checks.Ch02.Asker do
     end
 
     receive do
-      :stop -> :ok
+      {:reply, to, ref, answer} -> send(to, {:answer, ref, answer})
     end
   end
 
-  defp stop(server) do
-    ref = Process.monitor(server)
-    send(server, :stop)
+  defp answer_and_exit(server, caller, ref, answer) do
+    monitor = Process.monitor(server)
+    send(server, {:reply, caller, ref, answer})
 
     receive do
-      {:DOWN, ^ref, :process, ^server, _reason} -> :ok
+      {:DOWN, ^monitor, :process, ^server, _reason} -> :ok
     end
   end
 

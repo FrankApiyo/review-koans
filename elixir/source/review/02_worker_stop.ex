@@ -1,7 +1,7 @@
 defmodule Review.Ch02.WorkerStop do
   @moduledoc """
-  A worker is a plain process that answers `{:ping, from}` with `:pong`. It does not trap
-  exits. `stop/1` stops it and returns `:ok`.
+  A worker is a plain process that answers `{:ping, from}` with `:pong`. `stop/1` stops it
+  and returns `:ok`.
   """
 
   @spec start() :: pid()

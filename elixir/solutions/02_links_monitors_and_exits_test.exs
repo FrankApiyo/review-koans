@@ -12,14 +12,18 @@ defmodule Koans.Ch02.LinksMonitorsAndExitsTest do
   what reaches the other side when it ends, normally or not. The runtime's rules: a link
   carries an exit signal both ways, and a process that does not trap exits dies of any
   reason except `:normal`. Trapping turns the signal into an `{:EXIT, pid, reason}` message,
-  `:normal` included. `:kill` cannot be trapped and is reported as `:killed`. A monitor is
-  one-way and delivers one `:DOWN` message. Linking a `Task.async` to its caller is
-  Elixir's choice; `Task.Supervisor.async_nolink` monitors the task without the link.
+  `:normal` included. `Process.exit(pid, :kill)` cannot be trapped, and links and monitors
+  see the reason `:killed`. A monitor is one-way and delivers one `:DOWN` message. Linking a
+  `Task.async` to its caller is Elixir's choice; `Task.Supervisor.async_nolink` monitors
+  the task without the link.
 
   A common mistake: wrapping `spawn_link` in `try/rescue`. The crash happens in the other
-  process and arrives as a signal, so no `rescue` in the caller sees it. Start the process
-  unlinked, or monitor it and read the `:DOWN`. Once the answer is in,
-  `Process.demonitor(ref, [:flush])` removes the monitor and any `:DOWN` already waiting.
+  process and arrives as a signal, so no `rescue` in the caller sees it, and trapping exits
+  in the caller only turns it into mail the caller must read. Start the process unlinked,
+  or monitor it and read the `:DOWN`. Unlinking after the start (`spawn_link` then
+  `Process.unlink`, or `Task.async` then `Task.ignore`) leaves a window in which a fast
+  crash still takes the caller. Once the answer is in, `Process.demonitor(ref, [:flush])`
+  removes the monitor and any `:DOWN` already waiting.
 
   Read more: https://hexdocs.pm/elixir/1.19.5/Process.html,
   https://hexdocs.pm/elixir/1.19.5/Task.html,
@@ -170,7 +174,7 @@ defmodule Koans.Ch02.LinksMonitorsAndExitsTest do
   end
 
   koan "Read koans/review/02_worker_stop.ex. Write :fine, or the line number of the bug." do
-    verdict("02_worker_stop.ex", 12, "8b91da40a4,badaf31ea3", "bb792867b6")
+    verdict("02_worker_stop.ex", 12, "8b91da40a4,badaf31ea3", "9d9c24bf82")
   end
 
   koan "Fix the bug in koans/review/02_worker_stop.ex in place. The hidden checks name what still fails." do

@@ -14,7 +14,7 @@ defmodule Checks.Ch02.Notifier do
        fn ->
          assert {:ok, {_, _, ["a@x.io", "b@x.io"]}} = Hidden.isolated(fn -> deliver(@good) end)
        end},
-      {:exploit, "a delivery that crashes cannot take the caller with it",
+      {:exploit, "the caller is not linked to any delivery",
        fn ->
          assert {:ok, {[], _, ["a@x.io", "b@x.io"]}} =
                   Hidden.isolated(fn -> deliver(@with_bad) end)
