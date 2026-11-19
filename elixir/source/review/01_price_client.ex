@@ -14,13 +14,17 @@ defmodule Review.Ch01.PriceClient do
 
     receive do
       {:price, price} -> {:ok, price}
+    after
+      timeout -> {:error, :timeout}
     # === fixed
     ref = make_ref()
     send(server, {:price, sku, {self(), ref}})
 
     receive do
       {^ref, price} -> {:ok, price}
-    # === alt: a monitor ref as the tag, as GenServer.call-style code does
+    after
+      timeout -> {:error, :timeout}
+    # === alt: a monitor on the server as the request's tag, removed on every path
     ref = Process.monitor(server)
     send(server, {:price, sku, {self(), ref}})
 
@@ -28,17 +32,35 @@ defmodule Review.Ch01.PriceClient do
       {^ref, price} ->
         Process.demonitor(ref, [:flush])
         {:ok, price}
+    after
+      timeout ->
+        Process.demonitor(ref, [:flush])
+        {:error, :timeout}
+    # === wrong: partial — tags the request with a monitor on the server but keeps it after a timeout
+    ref = Process.monitor(server)
+    send(server, {:price, sku, {self(), ref}})
+
+    receive do
+      {^ref, price} ->
+        Process.demonitor(ref, [:flush])
+        {:ok, price}
+    after
+      timeout -> {:error, :timeout}
     # === wrong: refuses — takes the reply but reports every request as timed out
     send(server, {:price, sku, {self(), make_ref()}})
 
     receive do
       {_tag, _price} -> {:error, :timeout}
+    after
+      timeout -> {:error, :timeout}
     # === wrong: partial — tags the request with a ref but leaves it unpinned in the receive
     ref = make_ref()
     send(server, {:price, sku, {self(), ref}})
 
     receive do
       {_ref, price} -> {:ok, price}
+    after
+      timeout -> {:error, :timeout}
     # === wrong: partial — drops every waiting message before asking, other callers' included
     {:messages, waiting} = Process.info(self(), :messages)
     Enum.each(waiting, fn message -> receive(do: (^message -> :ok)) end)
@@ -46,6 +68,8 @@ defmodule Review.Ch01.PriceClient do
 
     receive do
       {:price, price} -> {:ok, price}
+    after
+      timeout -> {:error, :timeout}
     # === wrong: partial — drops only stale replies before asking, so one still on its way gets through
     drop_stale = fn drop_stale ->
       receive do
@@ -60,9 +84,9 @@ defmodule Review.Ch01.PriceClient do
 
     receive do
       {:price, price} -> {:ok, price}
-    # <<<
     after
       timeout -> {:error, :timeout}
+    # <<<
     end
   end
 

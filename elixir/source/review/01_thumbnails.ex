@@ -31,6 +31,17 @@ defmodule Review.Ch01.Thumbnails do
     receive do
       {:DOWN, ^ref, :process, ^pid, {:done, thumb}} -> {:ok, thumb}
       {:DOWN, ^ref, :process, ^pid, reason} -> {:error, reason}
+    # === alt: Process.spawn with :monitor, and the result tagged with a fresh ref
+    tag = make_ref()
+    {pid, ref} = Process.spawn(fn -> send(parent, {tag, resize.(image)}) end, [:monitor])
+
+    receive do
+      {^tag, thumb} ->
+        Process.demonitor(ref, [:flush])
+        {:ok, thumb}
+
+      {:DOWN, ^ref, :process, ^pid, reason} ->
+        {:error, reason}
     # === wrong: refuses — waits for the worker, then reports it busy
     spawn(fn -> send(parent, {:done, resize.(image)}) end)
 

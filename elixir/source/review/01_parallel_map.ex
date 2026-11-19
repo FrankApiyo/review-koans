@@ -6,8 +6,8 @@ defmodule Review.Ch01.ParallelMap do
   @spec map([term()], (term() -> term())) :: [term()]
   def map(list, fun) do
     # >>> fix
-    # also: receive do — a reviewer points at the receive that waits for a reply no worker sends
-    # also: {^pid, result} -> result — a reviewer points at the clause that matches a reply no worker sends
+    # also: receive do — a reviewer points at the receive that waits for a reply that never reaches the caller
+    # also: {^pid, result} -> result — a reviewer points at the clause that matches a reply that never reaches the caller
     pids = Enum.map(list, fn x -> spawn(fn -> send(self(), {self(), fun.(x)}) end) end)
     Enum.map(pids, &await/1)
     # === fixed

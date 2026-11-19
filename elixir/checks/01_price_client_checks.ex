@@ -23,7 +23,9 @@ defmodule Checks.Ch01.PriceClient do
       {:exploit, "a late reply to an abandoned request",
        fn -> assert {:ok, {:ok, 120}} = Hidden.isolated(&fetch_after_late_reply/0) end},
       {:exploit, "a late reply still on its way when the next request is sent",
-       fn -> assert {:ok, {:ok, 120}} = Hidden.isolated(&fetch_with_late_reply_in_flight/0) end}
+       fn -> assert {:ok, {:ok, 120}} = Hidden.isolated(&fetch_with_late_reply_in_flight/0) end},
+      {:exploit, "a timed-out request leaves no monitor and no :DOWN behind",
+       fn -> assert {:ok, {[], []}} = Hidden.isolated(&leftovers_after_timeout/0) end}
     ]
   end
 
@@ -71,6 +73,24 @@ defmodule Checks.Ch01.PriceClient do
             send(server, :release)
         end
     end
+  end
+
+  # The server is still blocked in the slow lookup when the monitors are read, then it is
+  # killed and its own :DOWN, from the one dying sender, marks that it is gone.
+  defp leftovers_after_timeout do
+    server = PriceClient.start(lookup(self()))
+    {:error, :timeout} = PriceClient.fetch(server, "slow", 0)
+    {:monitors, monitors} = Process.info(self(), :monitors)
+    Process.unlink(server)
+    gone = Process.monitor(server)
+    Process.exit(server, :kill)
+
+    receive do
+      {:DOWN, ^gone, :process, ^server, :killed} -> :ok
+    end
+
+    {:messages, messages} = Process.info(self(), :messages)
+    {monitors, for({:DOWN, _, _, _, _} = down <- messages, do: down)}
   end
 
   defp lookup(caller) do

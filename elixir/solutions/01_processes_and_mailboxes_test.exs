@@ -88,7 +88,7 @@ defmodule Koans.Ch01.ProcessesAndMailboxesTest do
   end
 
   koan "Read koans/review/01_price_client.ex. Write :fine, or the line number of the bug." do
-    verdict("01_price_client.ex", 15, "7561b8f9be,9893345e99,cd6ee562cb", "eb2541919c")
+    verdict("01_price_client.ex", 15, "07d76d2a0a,7561b8f9be,9844f0b38b,9893345e99,cd6ee562cb", "eb2541919c")
   end
 
   koan "Fix the bug in koans/review/01_price_client.ex in place. The hidden checks name what still fails." do

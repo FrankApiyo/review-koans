@@ -36,7 +36,6 @@ defmodule Checks.Ch01.Thumbnails do
   defp held_until_waiting(caller) do
     fn image ->
       wait_for_receive(caller)
-      {:monitored_by, _} = Process.info(self(), :monitored_by)
       Thumb.resize!(image)
     end
   end
