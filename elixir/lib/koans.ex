@@ -3,6 +3,7 @@ defmodule Koans do
     quote do
       use ExUnit.Case, async: false
       import Koans, only: [koan: 2, __: 0, verdict: 4]
+      import Koans.Hidden, only: [run_checks: 2]
     end
   end
 

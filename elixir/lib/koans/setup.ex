@@ -1,6 +1,11 @@
 defmodule Koans.Setup do
+  # A crash report that lands after its koan ends would print a check's input;
+  # with capture_log on, no other log reaches the default handler.
   @spec start!() :: :ok
-  def start!, do: :ok
+  def start! do
+    _ = :logger.remove_handler(:default)
+    :ok
+  end
 
   @spec ex_unit_options() :: keyword()
   def ex_unit_options do

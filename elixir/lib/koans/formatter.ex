@@ -4,6 +4,8 @@ defmodule Koans.Formatter do
   alias Koans.Footer
 
   @initial %{passed: 0, ran: 0, failures: [], finished: []}
+  @timed_out "A hidden case did not finish within 5 seconds."
+  @process_exited "A hidden case stopped the koan: the test process exited."
 
   @impl true
   def init(_opts), do: {:ok, @initial}
@@ -79,17 +81,32 @@ defmodule Koans.Formatter do
 
   defp build_failure(test, {kind, reason, stacktrace}) do
     {file, line} = Footer.location(test, reason, stacktrace)
+    {text, write} = text_and_write(test.tags[:review_module], kind, reason, stacktrace)
 
     %{
       path: Path.relative_to_cwd(file),
       line: line,
       meditation: to_string(test.tags[:meditation]),
-      diff: failure_text(kind, reason, stacktrace),
-      write: nil,
+      diff: text,
+      write: write,
       kind: Footer.kind(kind, reason),
       sort_key: {test.tags.file, test.tags.line}
     }
   end
+
+  # A fix koan names the review file to write and never shows a check's diff or input.
+  defp text_and_write(review, kind, reason, stacktrace) do
+    case {reason, review && stopped(kind, reason)} do
+      {%Koans.HiddenCase{} = error, _} -> {Exception.message(error), error.review_path}
+      {_, text} when is_binary(text) -> {text, Koans.Hidden.review_path(review)}
+      _ -> {failure_text(kind, reason, stacktrace), nil}
+    end
+  end
+
+  defp stopped(_kind, %ExUnit.TimeoutError{}), do: @timed_out
+  defp stopped({:EXIT, _pid}, _reason), do: @process_exited
+  defp stopped(:exit, _reason), do: @process_exited
+  defp stopped(_kind, _reason), do: nil
 
   defp failure_text(kind, reason, stacktrace) do
     case Footer.blank(reason) do

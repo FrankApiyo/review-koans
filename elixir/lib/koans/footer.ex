@@ -50,8 +50,10 @@ defmodule Koans.Footer do
     |> Enum.sum()
   end
 
-  @spec kind(atom(), term()) :: String.t()
+  @spec kind(atom() | {:EXIT, pid()}, term()) :: String.t()
   def kind(_kind, %ExUnit.TimeoutError{}), do: "timeout"
+  def kind(_kind, %Koans.HiddenCase{kind: kind}), do: "Koans.HiddenCase:#{kind}"
+  def kind({:EXIT, _pid}, _reason), do: "exit"
 
   def kind(kind, reason) do
     case {find_blank(reason), kind, reason} do
