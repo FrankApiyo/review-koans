@@ -1,2 +1,4 @@
 # Clock-ban exemptions for tests/test_elixir.py: path | stripped line text | reason.
 # Allow only a timer that cannot race: it always fires, or it only turns a hang into a failure.
+elixir/source/review/01_price_client.ex | after | fetch/3's timeout is the caller's argument: checks pass 0 only while the server is provably blocked, and otherwise the reply always comes first
+elixir/source/review/01_thumbnails.ex | after | only a wrong half's timeout: the crash case never sends a result, so the timer always fires and the half fails either way

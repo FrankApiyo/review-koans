@@ -1,0 +1,17 @@
+exit 0
+--- stdout
+
+[error] Process #PID<0.109.0> raised an exception
+** (ArithmeticError) bad argument in arithmetic expression
+    :erlang.*("3", 250)
+    traces/01_invoice.exs:3: anonymous fn/2 in Invoice.total/1
+    (elixir 1.19.5) lib/enum.ex:2520: Enum."-reduce/3-lists^foldl/2-0-"/3
+
+[error] Process #PID<0.110.0> raised an exception
+** (ArgumentError) qty must be an integer
+    traces/01_invoice.exs:8: Ending.reject/0
+
+[error] Process #PID<0.112.0> raised an exception
+** (ErlangError) Erlang error: {:nocatch, :oops}
+    traces/01_invoice.exs:10: Ending.give_up/0
+--- stderr

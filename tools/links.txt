@@ -1,0 +1,3 @@
+https://hexdocs.pm/elixir/1.19.5/Process.html
+https://hexdocs.pm/elixir/1.19.5/processes.html
+https://www.erlang.org/doc/system/ref_man_processes.html
