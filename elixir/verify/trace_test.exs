@@ -64,6 +64,30 @@ defmodule Verify.TraceTest do
     assert with_trace(called, &Trace.last_message/1) == ~s({:bump, "two"})
   end
 
+  test "init_failure is the module and line of the first init frame in a start error" do
+    start_error = """
+    {:error,
+     {:shutdown,
+      {:failed_to_start_child, Shop.Cache,
+       {{:badmatch, {:error, :econnrefused}},
+        [
+          {Shop.Cache, :init, 1, [file: ~c"traces/inline.exs", line: 8]},
+          {:gen_server, :init_it, 2, [file: ~c"gen_server.erl", line: 2276]}
+        ]}}}}
+    """
+
+    assert with_trace(start_error, &Trace.init_failure/1) == {"Shop.Cache", 8}
+  end
+
+  test "init_failure skips runtime init frames and is nil without a course one" do
+    runtime_only = """
+    {Supervisor.Default, :init, 1, [file: ~c"lib/supervisor/default.ex", line: 7]},
+    {:gen_server, :init_it, 2, [file: ~c"gen_server.erl", line: 2276]}
+    """
+
+    assert with_trace(runtime_only, &Trace.init_failure/1) == nil
+  end
+
   test "an answer holding a pid, ref, port or LiveView id raises" do
     varying = """
     [error] GenServer #PID<0.512.0> terminating

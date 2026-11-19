@@ -14,6 +14,7 @@ defmodule Koans.Trace do
   @named_server ~r/^GenServer (.+) terminating$/
   @last_message ~r/^Last message(?: \(from [^)]*\))?: (.*)$/m
   @event ~r/"event" => "([^"]*)"/
+  @init_frame ~r/\{([A-Z]\w*(?:\.[A-Z]\w*)*), :init, 1, \[file: ~c"traces\/[^"]*", line: (\d+)\]\}/
   @varying ~r/#PID<|#Reference<|#Port<|phx-/
 
   @spec read!(String.t()) :: String.t()
@@ -51,6 +52,15 @@ defmodule Koans.Trace do
     |> Regex.scan(read!(name), capture: :all_but_first)
     |> Enum.find_value(fn [message] -> first(message, @event) end)
     |> checked(name)
+  end
+
+  @doc "The module and line of the first course `init/1` frame in a start error's stacktrace term."
+  @spec init_failure(String.t()) :: {String.t(), pos_integer()} | nil
+  def init_failure(name) do
+    case Regex.run(@init_frame, read!(name), capture: :all_but_first) do
+      [module, line] -> {module, String.to_integer(line)}
+      nil -> nil
+    end
   end
 
   defp first(text, regex) do

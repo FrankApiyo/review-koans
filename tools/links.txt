@@ -1,7 +1,10 @@
 https://hexdocs.pm/elixir/1.19.5/GenServer.html
 https://hexdocs.pm/elixir/1.19.5/Process.html
+https://hexdocs.pm/elixir/1.19.5/Supervisor.html
 https://hexdocs.pm/elixir/1.19.5/Task.html
 https://hexdocs.pm/elixir/1.19.5/processes.html
 https://www.erlang.org/doc/apps/erts/erlang.html
 https://www.erlang.org/doc/apps/stdlib/gen_server.html
+https://www.erlang.org/doc/apps/stdlib/supervisor.html
 https://www.erlang.org/doc/system/ref_man_processes.html
+https://www.erlang.org/doc/system/sup_princ.html
