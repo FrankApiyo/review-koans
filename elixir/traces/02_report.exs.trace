@@ -1,0 +1,13 @@
+exit 0
+--- stdout
+
+[error] Task #PID<0.107.0> started from #PID<0.106.0> terminating
+** (FunctionClauseError) no function clause matching in String.upcase/2
+    (elixir 1.19.5) lib/string.ex:919: String.upcase(:b, :default)
+    (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+    (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+    (elixir 1.19.5) lib/task/supervised.ex:105: Task.Supervised.invoke_mfa/2
+    (elixir 1.19.5) lib/task/supervised.ex:40: Task.Supervised.reply/4
+Function: &Report.upcase_all/1
+    Args: [["a", :b]]
+--- stderr

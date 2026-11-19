@@ -2,3 +2,4 @@
 # Allow only a timer that cannot race: it always fires, or it only turns a hang into a failure.
 elixir/source/review/01_price_client.ex | after | fetch/3's timeout is the caller's argument: checks pass 0 only while the server is provably blocked, and otherwise the reply always comes first
 elixir/source/review/01_thumbnails.ex | after | only a wrong half's timeout: the crash case never sends a result, so the timer always fires and the half fails either way
+elixir/source/review/02_asker.ex | after | only an alt half: after 0 takes a :DOWN that is already waiting and never waits
