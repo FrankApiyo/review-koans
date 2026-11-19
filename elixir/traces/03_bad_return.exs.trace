@@ -1,0 +1,18 @@
+exit 0
+--- stdout
+
+[error] GenServer Counter terminating
+** (stop) bad return value: {:ok, 1}
+Last message (from #PID<0.94.0>): :incr
+State: 0
+Client #PID<0.94.0> is alive
+
+    (stdlib 7.3) gen.erl:262: :gen.do_call/4
+    (elixir 1.19.5) lib/gen_server.ex:1139: GenServer.call/3
+    traces/03_bad_return.exs:36: (file)
+    (elixir 1.19.5) src/elixir_compiler.erl:81: :elixir_compiler.dispatch/4
+    (elixir 1.19.5) src/elixir_compiler.erl:56: :elixir_compiler.compile/4
+    (elixir 1.19.5) src/elixir_compiler.erl:43: :elixir_compiler.maybe_fast_compile/2
+    (elixir 1.19.5) src/elixir_lexical.erl:17: :elixir_lexical.run/3
+    (elixir 1.19.5) src/elixir_compiler.erl:21: :elixir_compiler.quoted/3
+--- stderr
