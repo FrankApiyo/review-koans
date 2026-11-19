@@ -84,8 +84,6 @@ def verdict_for(file: str):
 
 
 def mix_test(paths: list[str], *, koans_dir: str, build_path: str) -> MixRun:
-    # Mix misses a same-size rewrite made within the second of its last compile, so without
-    # --force a staged half can run against the previous half's beam.
     return run_mix(["test", "--force", *paths], koans_dir=koans_dir, build_path=build_path, verify=True)
 
 
@@ -409,8 +407,13 @@ def test_no_personal_paths_in_tracked_files():
     assert found == []
 
 
+def test_every_mix_test_is_forced():
+    with pytest.raises(ValueError, match="--force"):
+        run_mix(["test", "_variants/none"], koans_dir="_variants/none", build_path="_build_variants")
+
+
 def test_native_runtime_suite_passes():
-    run = run_mix(["test"], koans_dir="verify", build_path="_build_verify")
+    run = run_mix(["test", "--force"], koans_dir="verify", build_path="_build_verify")
     assert run.returncode == 0, run.output[-3000:]
 
 

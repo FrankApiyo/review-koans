@@ -401,6 +401,8 @@ def _review_parts(path: str, text: str, dialect: Dialect) -> tuple[list[str | in
 
 def render_review(path: str, text: str, dialect: Dialect) -> Review:
     segments, blocks, koans = _review_parts(path, text, dialect)
+    if not blocks:
+        raise GenerationError(f"{path}:1: fine review needs a guard block")
     lines = koans.split("\n")
     accepted = {
         line

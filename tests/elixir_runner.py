@@ -35,6 +35,10 @@ class KoansResult:
 def run_mix(
     args: list[str], *, koans_dir: str, build_path: str, verify: bool = False, timeout: int = 1800
 ) -> MixRun:
+    # Mix misses a same-size rewrite made within the second of its last compile, so an unforced
+    # mix test can run a staged half against the previous half's beam.
+    if args[:1] == ["test"] and "--force" not in args:
+        raise ValueError("every harness mix test runs with --force")
     env = {**os.environ, **QUIET_OFFLINE, "KOANS_DIR": koans_dir, "MIX_BUILD_PATH": str(ELIXIR / build_path)}
     env.pop("KOANS_VERIFY", None)
     if verify:

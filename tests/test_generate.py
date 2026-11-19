@@ -139,9 +139,11 @@ def make_track(root, files):
         path.write_text(content, encoding="utf-8")
 
 
+R_SOURCE = "defmodule R do\n  # >>> guard\n  def f, do: 1\n  # === wrong: partial — returns nothing\n  # <<<\nend\n"
+R_RENDER = "defmodule R do\n  def f, do: 1\nend\n"
 SOURCE = {
     "source/01_a_test.exs": "assert x == _a(1)\n",
-    "source/review/01_r.ex": "defmodule R do\nend\n",
+    "source/review/01_r.ex": R_SOURCE,
     "source/01_b_test.exs": 'verdict("01_r.ex", _a(:fine))\n',
 }
 
@@ -150,12 +152,12 @@ def test_render_track_renders_every_source_file_to_both_trees(tmp_path):
     make_track(tmp_path, SOURCE)
     out = render_track("elixir", tmp_path)
     fine = digest("01_r.ex", "fine")
-    source = hashlib.sha256(b"defmodule R do\nend\n").hexdigest()[:10]
+    source = hashlib.sha256(R_RENDER.encode()).hexdigest()[:10]
     assert out == {
         tmp_path / "elixir/koans/01_a_test.exs": "assert x == __\n",
         tmp_path / "elixir/solutions/01_a_test.exs": "assert x == 1\n",
-        tmp_path / "elixir/koans/review/01_r.ex": "defmodule R do\nend\n",
-        tmp_path / "elixir/solutions/review/01_r.ex": "defmodule R do\nend\n",
+        tmp_path / "elixir/koans/review/01_r.ex": R_RENDER,
+        tmp_path / "elixir/solutions/review/01_r.ex": R_RENDER,
         tmp_path / "elixir/koans/01_b_test.exs": f'verdict("01_r.ex", __, "{fine}", "{source}")\n',
         tmp_path / "elixir/solutions/01_b_test.exs": f'verdict("01_r.ex", :fine, "{fine}", "{source}")\n',
     }
@@ -516,6 +518,12 @@ def test_guard_block_needs_a_wrong_half():
     with_fixed = FINE.replace("    # === wrong", "    # === fixed\n    x\n    # === wrong")
     with pytest.raises(GenerationError, match=r"fine\.ex:3: guard block has no fixed half"):
         render_review("fine.ex", with_fixed, ELIXIR)
+
+
+def test_fine_review_needs_a_guard_block():
+    assert [block.kind for block in render_review("fine.ex", FINE, ELIXIR).blocks] == ["guard"]
+    with pytest.raises(GenerationError, match=r"fine\.ex:1: fine review needs a guard block"):
+        render_review("fine.ex", FINE_RENDER, ELIXIR)
 
 
 def test_guard_wrong_halves_are_tagged_partial():
