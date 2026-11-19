@@ -12,10 +12,10 @@ defmodule Koans.Ch00.HowReviewKoansWorkTest do
 
       Meditate on koans/00_how_review_koans_work_test.exs:34
 
-  A fix names the file to change and the koan that runs its checks. A failing check prints its
-  label, never its input:
+  A fix names the file to change and the koan that runs its checks. A failing check shows its
+  label, never a raw value or the fix:
 
-      A hidden case still fails: a ten percent discount
+      A hidden case still fails: an ordinary discount
       ------------------------------- The master says --------------------------------
       Write:        koans/review/00_discount.ex
       Exercised by: koans/00_how_review_koans_work_test.exs:42
@@ -35,7 +35,7 @@ defmodule Koans.Ch00.HowReviewKoansWorkTest do
   end
 
   koan "Read koans/review/00_discount.ex. Write :fine, or the line number of the bug." do
-    verdict("00_discount.ex", __, "3134d09144", "ff8ace6fb7")
+    verdict("00_discount.ex", __, "3134d09144", "0a6594da56")
   end
 
   koan "Fix the bug in koans/review/00_discount.ex in place. The hidden checks name what still fails." do

@@ -7,9 +7,10 @@ defmodule Checks.Ch00.Discount do
   @impl true
   def cases do
     [
-      {:twin, "a price with no discount", fn -> assert 1000 = Discount.apply(1000, 0) end},
-      {:exploit, "a ten percent discount", fn -> assert 900 = Discount.apply(1000, 10) end},
-      {:exploit, "a discount on an odd price", fn -> assert 900 = Discount.apply(999, 10) end}
+      {:twin, "a price with no discount", fn -> assert 1000 = Discount.discounted(1000, 0) end},
+      {:exploit, "an ordinary discount", fn -> assert 900 = Discount.discounted(1000, 10) end},
+      {:exploit, "a discount that does not divide evenly",
+       fn -> assert 900 = Discount.discounted(999, 10) end}
     ]
   end
 end
