@@ -6,7 +6,8 @@ defmodule Koans.Ch01.ProcessesAndMailboxesTest do
 
   Why it bites: a late reply answers the next request, so one customer sees another's price.
   A mailbox nothing drains grows until the node runs out of memory. A worker that crashes
-  before it replies leaves its caller waiting forever.
+  before it replies leaves its caller waiting forever. Spawning and then monitoring races: a
+  worker that dies first leaves only `:noproc`, so `spawn_monitor` sets the monitor as it spawns.
 
   Review habit: Name the other process. For each `send`, say who receives it and what happens
   if that process is dead, slow or never answers. For each `receive`, say who sends what it

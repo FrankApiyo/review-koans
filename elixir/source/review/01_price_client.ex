@@ -20,6 +20,14 @@ defmodule Review.Ch01.PriceClient do
 
     receive do
       {^ref, price} -> {:ok, price}
+    # === alt: a monitor ref as the tag, as GenServer.call-style code does
+    ref = Process.monitor(server)
+    send(server, {:price, sku, {self(), ref}})
+
+    receive do
+      {^ref, price} ->
+        Process.demonitor(ref, [:flush])
+        {:ok, price}
     # === wrong: refuses — takes the reply but reports every request as timed out
     send(server, {:price, sku, {self(), make_ref()}})
 

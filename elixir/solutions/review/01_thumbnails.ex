@@ -1,16 +1,16 @@
 defmodule Review.Ch01.Thumbnails do
   @moduledoc """
-  `render/1` resizes an image in a worker process with `Course.Ch01.Thumb.resize!/1`. It
-  returns `{:ok, thumbnail}`, or `{:error, reason}` with the worker's exit reason when the
-  worker crashes.
+  `render/2` resizes an image in a worker process with `resize`, by default
+  `Course.Ch01.Thumb.resize!/1`. It returns `{:ok, thumbnail}`, or `{:error, reason}` with the
+  worker's exit reason when the worker crashes.
   """
 
   alias Course.Ch01.Thumb
 
-  @spec render(map()) :: {:ok, map()} | {:error, term()}
-  def render(image) do
+  @spec render(map(), (map() -> map())) :: {:ok, map()} | {:error, term()}
+  def render(image, resize \\ &Thumb.resize!/1) do
     parent = self()
-    {pid, ref} = spawn_monitor(fn -> send(parent, {:done, self(), Thumb.resize!(image)}) end)
+    {pid, ref} = spawn_monitor(fn -> send(parent, {:done, self(), resize.(image)}) end)
 
     receive do
       {:done, ^pid, thumb} ->

@@ -31,6 +31,12 @@ defmodule Review.Ch01.Tally do
 
       _other ->
         loop(total)
+      # === alt: logs anything it does not know, then drops it
+
+      unknown ->
+        require Logger
+        Logger.warning("tally dropped an unknown message: #{inspect(unknown)}")
+        loop(total)
       # === wrong: refuses — stops the tally on any message it does not know
 
       _other ->
