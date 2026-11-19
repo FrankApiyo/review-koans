@@ -96,6 +96,32 @@ defmodule Verify.HiddenTest do
     refute_leaks(out, "pear_7731")
   end
 
+  test "a fix that changes the arity names the exception, at compile time and run time, by label only" do
+    {out, _status} = run("hidden_arity", ["--force"], [{"KOANS_VERIFY", "1"}])
+    review = "verify/fixtures/hidden_arity/review/cart.ex"
+
+    assert out =~ "Compiling"
+
+    assert footer(out, 6) ==
+             Enum.join(
+               [
+                 "A hidden case still fails: an empty add (it raised UndefinedFunctionError)",
+                 @separator,
+                 "Write:        #{review}",
+                 "Exercised by: verify/fixtures/hidden_arity/01_cart_test.exs:5",
+                 meditation(review),
+                 "0 of 1 koans answered."
+               ],
+               "\n"
+             )
+
+    assert out =~
+             "KOANS-TEST Koans.HiddenCase:exploit verify/fixtures/hidden_arity/01_cart_test.exs:4"
+
+    refute out =~ "warning"
+    refute_leaks(out, "fig_3391")
+  end
+
   test "twin failure is reported as twin" do
     {out, _status} = run_verify("hidden_twin")
 
@@ -217,9 +243,18 @@ defmodule Verify.HiddenTest do
              "A hidden case still fails: an empty add (it exited)"
   end
 
-  test "isolated returns {:ok, v}, {:down, reason} and :timeout" do
+  defp live_children do
     parent = self()
+    Enum.filter(Process.list(), &(Process.info(&1, :parent) == {:parent, parent}))
+  end
 
+  defp stop(pid) do
+    ref = Process.monitor(pid)
+    Process.exit(pid, :kill)
+    receive(do: ({:DOWN, ^ref, :process, ^pid, :killed} -> :ok))
+  end
+
+  test "isolated returns {:ok, v}, {:down, reason} and :timeout" do
     assert Hidden.isolated(fn -> :done end) == {:ok, :done}
     assert Hidden.isolated(fn -> exit(:boom) end) == {:down, :boom}
 
@@ -230,14 +265,13 @@ defmodule Verify.HiddenTest do
 
     assert Hidden.isolated(linked_crash) == {:down, :linked}
 
-    hang = fn ->
-      send(parent, {:hung, self()})
-      receive(do: (:never -> :ok))
-    end
+    blocked = spawn(fn -> receive(do: (:never -> :ok)) end)
+    assert live_children() == [blocked]
+    stop(blocked)
 
-    assert Hidden.isolated(hang, 10) == :timeout
-    assert_received {:hung, pid}
-    refute Process.alive?(pid)
+    # The fun never returns, so :timeout holds whether or not it was scheduled before the kill.
+    assert Hidden.isolated(fn -> receive(do: (:never -> :ok)) end, 10) == :timeout
+    assert live_children() == []
     refute_received {:DOWN, _, _, _, _}
   end
 

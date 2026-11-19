@@ -1,7 +1,5 @@
 defmodule Checks.HiddenRaised.Cart do
-  @behaviour Koans.Checks
-
-  import ExUnit.Assertions
+  use Koans.Checks, review: Review.HiddenRaised.Cart
 
   alias Review.HiddenRaised.Cart
 
@@ -9,7 +7,7 @@ defmodule Checks.HiddenRaised.Cart do
   def cases do
     [
       {:exploit, "a line with no qty counts once",
-       fn -> assert Cart.total([%{unit_cents: 9907}]) == 9907 end}
+       fn -> assert 9907 = Cart.total([%{unit_cents: 9907}]) end}
     ]
   end
 end

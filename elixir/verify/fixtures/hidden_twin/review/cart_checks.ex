@@ -1,7 +1,5 @@
 defmodule Checks.HiddenTwin.Cart do
-  @behaviour Koans.Checks
-
-  import ExUnit.Assertions
+  use Koans.Checks, review: Review.HiddenTwin.Cart
 
   alias Review.HiddenTwin.Cart
 

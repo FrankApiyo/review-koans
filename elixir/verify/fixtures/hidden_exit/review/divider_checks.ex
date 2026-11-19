@@ -1,7 +1,5 @@
 defmodule Checks.HiddenExit.Isolated do
-  @behaviour Koans.Checks
-
-  import ExUnit.Assertions
+  use Koans.Checks, review: Review.HiddenExit.Divider
 
   alias Review.HiddenExit.Divider
 
@@ -9,22 +7,20 @@ defmodule Checks.HiddenExit.Isolated do
   def cases do
     [
       {:exploit, "no parts",
-       fn -> assert Koans.Hidden.isolated(fn -> Divider.share(6413, 0) end) == {:ok, 0} end}
+       fn -> assert {:ok, 0} = Koans.Hidden.isolated(fn -> Divider.share(6413, 0) end) end}
     ]
   end
 end
 
 defmodule Checks.HiddenExit.Unisolated do
-  @behaviour Koans.Checks
-
-  import ExUnit.Assertions
+  use Koans.Checks, review: Review.HiddenExit.Divider
 
   alias Review.HiddenExit.Divider
 
   @impl true
   def cases do
     [
-      {:exploit, "no parts", fn -> assert Divider.share(6413, 0) == 0 end}
+      {:exploit, "no parts", fn -> assert 0 = Divider.share(6413, 0) end}
     ]
   end
 end
