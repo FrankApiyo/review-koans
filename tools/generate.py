@@ -172,7 +172,7 @@ def _segments(path: str, text: str, dialect: Dialect) -> list[str | _Raw]:
         elif stripped == closer:
             if raw is None:
                 raise GenerationError(f"{path}:{number}: {closer} without {opener.strip()}")
-            out.append(replace(raw, end=offset + len(line)))
+            out.append(_closed(path, replace(raw, end=offset + len(line))))
             raw = None
         elif raw is not None:
             raw = replace(raw, body=(*raw.body, (number, line)))
@@ -182,6 +182,14 @@ def _segments(path: str, text: str, dialect: Dialect) -> list[str | _Raw]:
     if raw is not None:
         raise GenerationError(f"{path}:{raw.line}: unclosed {opener}{raw.tag}")
     return out
+
+
+def _closed(path: str, raw: _Raw) -> _Raw:
+    if raw.tag == ANSWER_TAG:
+        inside = next((number for number, line in raw.body if VALUE_MARKER.search(line)), None)
+        if inside is not None:
+            raise GenerationError(f"{path}:{inside}: _a( inside an answer block")
+    return raw
 
 
 def render_code_blocks(path: str, text: str, dialect: Dialect, *, solved: bool) -> str:
@@ -356,10 +364,15 @@ def _module_of(lines: list[str], index: int, threshold: int, dialect: Dialect) -
     return _walk_up(lines, index, threshold, lambda line: bool(dialect.module_head.match(line)))
 
 
+def _own_module(lines: list[str], line: int, dialect: Dialect) -> int | None:
+    text = lines[line - 1]
+    return line if dialect.module_head.match(text) else _module_of(lines, line - 1, _indent(text), dialect)
+
+
 def _also_lines(path: str, lines: list[str], block: Block, markers, dialect: Dialect) -> tuple[Also, ...]:
     if not markers:
         return ()
-    module =_module_of(lines, block.koans_start - 1, _block_indent(block), dialect)
+    module = _module_of(lines, block.koans_start - 1, _block_indent(block), dialect)
     found = []
     for marker in markers:
         matches = [n for n, line in enumerate(lines, 1) if marker.fragment in line]
@@ -369,7 +382,7 @@ def _also_lines(path: str, lines: list[str], block: Block, markers, dialect: Dia
                 f" of the koans render, not {len(matches)}"
             )
         [line] = matches
-        if _module_of(lines, line - 1, _indent(lines[line - 1]), dialect) != module:
+        if _own_module(lines, line, dialect) != module:
             raise GenerationError(f"{path}:{marker.line}: also: {marker.fragment!r} is not in the block's module")
         found.append(Also(marker.fragment, marker.reason, line))
     return tuple(found)
@@ -538,14 +551,13 @@ def _visible_files(folder: Path) -> list[Path]:
 def _check_one_verdict_each(reviews: Mapping[str, Review], verdicts: list[tuple[str, _Verdict]]) -> None:
     named = set()
     for path, verdict in verdicts:
-        review = reviews[verdict.file]
-        if _has_fix(review) and verdict.file in named:
+        if verdict.file in named:
             raise GenerationError(f"{path}:{verdict.line}: {verdict.file} already has a verdict")
         named.add(verdict.file)
     for name, review in reviews.items():
-        if _has_fix(review) and name not in named:
-            first = next(block for block in review.blocks if block.kind == "fix")
-            raise GenerationError(f"{review.path}:{first.source_line}: no verdict names {name}")
+        if name not in named:
+            line = review.blocks[0].source_line if review.blocks else 1
+            raise GenerationError(f"{review.path}:{line}: no verdict names {name}")
 
 
 def render_track(track: str, root: Path = ROOT) -> dict[Path, str]:

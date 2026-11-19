@@ -103,6 +103,18 @@ def test_fix_and_guard_blocks_outside_review_files_are_refused(kind):
         render_code_blocks("t.exs", f"a\n# >>> {kind}\nx = 1\n# <<<\n", ELIXIR, solved=False)
 
 
+def test_value_marker_inside_an_answer_block_is_refused():
+    src = BLOCK.replace("    y = 2\n", "    y = _a(2)\n")
+    assert src != BLOCK
+    for render in (
+        lambda: render_code_blocks("t.exs", src, ELIXIR, solved=False),
+        lambda: render_test("t.exs", src, ELIXIR, {}),
+        lambda: blanks("t.exs", src, ELIXIR),
+    ):
+        with pytest.raises(GenerationError, match=r"t\.exs:4: _a\( inside an answer block"):
+            render()
+
+
 def test_unknown_block_tag_is_refused():
     with pytest.raises(GenerationError, match=r"t\.exs:2: unknown block # >>> answr"):
         render_code_blocks("t.exs", "a\n# >>> answr\nx = 1\n# <<<\n", ELIXIR, solved=False)
@@ -130,17 +142,22 @@ def make_track(root, files):
 SOURCE = {
     "source/01_a_test.exs": "assert x == _a(1)\n",
     "source/review/01_r.ex": "defmodule R do\nend\n",
+    "source/01_b_test.exs": 'verdict("01_r.ex", _a(:fine))\n',
 }
 
 
 def test_render_track_renders_every_source_file_to_both_trees(tmp_path):
     make_track(tmp_path, SOURCE)
     out = render_track("elixir", tmp_path)
+    fine = digest("01_r.ex", "fine")
+    source = hashlib.sha256(b"defmodule R do\nend\n").hexdigest()[:10]
     assert out == {
         tmp_path / "elixir/koans/01_a_test.exs": "assert x == __\n",
         tmp_path / "elixir/solutions/01_a_test.exs": "assert x == 1\n",
         tmp_path / "elixir/koans/review/01_r.ex": "defmodule R do\nend\n",
         tmp_path / "elixir/solutions/review/01_r.ex": "defmodule R do\nend\n",
+        tmp_path / "elixir/koans/01_b_test.exs": f'verdict("01_r.ex", __, "{fine}", "{source}")\n',
+        tmp_path / "elixir/solutions/01_b_test.exs": f'verdict("01_r.ex", :fine, "{fine}", "{source}")\n',
     }
 
 
@@ -439,9 +456,17 @@ def test_also_in_other_module_is_refused():
     assert render_review("counter.ex", other + counter("      # also: receive do — same module\n"), ELIXIR).accepted == {
         6, 7, 8, 10
     }
-    src = other + counter("      # also: def other — another module\n")
-    with pytest.raises(GenerationError, match=r"counter\.ex:11: also: .* is not in the block's module"):
-        render_review("counter.ex", src, ELIXIR)
+    for fragment in ("def other", "defmodule Other"):
+        src = other + counter(f"      # also: {fragment} — another module\n")
+        with pytest.raises(GenerationError, match=r"counter\.ex:11: also: .* is not in the block's module"):
+            render_review("counter.ex", src, ELIXIR)
+
+
+def test_also_may_name_its_own_module_head():
+    also = "      # also: defmodule Review.Counter — a reviewer may point at the module\n"
+    review = render_review("counter.ex", counter(also), ELIXIR)
+    assert review.blocks[0].also == (Also("defmodule Review.Counter", "a reviewer may point at the module", 1),)
+    assert review.accepted == {1, 2, 4, 6}
 
 
 @pytest.mark.parametrize("also", ["# also: receive do", "# also: receive do — ", "# also: receive do —"])
@@ -560,7 +585,11 @@ def test_fine_verdict_requires_no_fix_block():
 
 
 def test_review_with_fix_block_needs_exactly_one_verdict(tmp_path):
-    files = {"source/review/double.ex": DOUBLE, "source/review/fine.ex": FINE, "source/00_a_test.exs": "x\n"}
+    files = {
+        "source/review/double.ex": DOUBLE,
+        "source/review/fine.ex": FINE,
+        "source/00_a_test.exs": verdict_test(":fine", file="fine.ex"),
+    }
     make_track(tmp_path, files)
     with pytest.raises(GenerationError, match=r"elixir/source/review/double\.ex:3: no verdict names double\.ex"):
         render_track("elixir", tmp_path)
@@ -570,6 +599,18 @@ def test_review_with_fix_block_needs_exactly_one_verdict(tmp_path):
     assert out[tmp_path / "elixir/koans/review/double.ex"] == render_review("double.ex", DOUBLE, ELIXIR).koans
     make_track(tmp_path, {"source/02_c_test.exs": verdict_test(4)})
     with pytest.raises(GenerationError, match=r"elixir/source/02_c_test\.exs:2: double\.ex already has a verdict"):
+        render_track("elixir", tmp_path)
+
+
+def test_fine_review_needs_exactly_one_verdict(tmp_path):
+    make_track(tmp_path, {"source/review/fine.ex": FINE, "source/00_a_test.exs": "x\n"})
+    with pytest.raises(GenerationError, match=r"elixir/source/review/fine\.ex:3: no verdict names fine\.ex"):
+        render_track("elixir", tmp_path)
+    make_track(tmp_path, {"source/01_b_test.exs": verdict_test(":fine", file="fine.ex")})
+    out = render_track("elixir", tmp_path)
+    assert 'verdict("fine.ex", :fine, "' in out[tmp_path / "elixir/solutions/01_b_test.exs"]
+    make_track(tmp_path, {"source/02_c_test.exs": verdict_test(":fine", file="fine.ex")})
+    with pytest.raises(GenerationError, match=r"elixir/source/02_c_test\.exs:2: fine\.ex already has a verdict"):
         render_track("elixir", tmp_path)
 
 
