@@ -1,0 +1,11 @@
+exit 1
+--- stdout
+--- stderr
+Traceback (most recent call last):
+  File "traces/03_last_error.py", line 11, in <module>
+    print(last_error([lambda: 1 / 0]))
+          ~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "traces/03_last_error.py", line 8, in last_error
+    return error
+           ^^^^^
+UnboundLocalError: cannot access local variable 'error' where it is not associated with a value

@@ -163,7 +163,7 @@ Exercised by: koans/00_how_review_koans_work_test.exs:42
 Write:        koans/review/00_discount.py
 Exercised by: koans/00_how_review_koans_work_test.py:47
     Fix the bug in koans/review/00_discount.py in place. The hidden checks name what still fails.
-2 of 30 koans answered.</code></pre>
+2 of 42 koans answered.</code></pre>
 <p>The checks are readable in <code>checks/</code>, as the answers are in <code>solutions/</code>. Read them only after a real attempt; reading them first defeats the exercise.</p>
 <p>An import error in a koan file stops the run before any footer: fix what the traceback names, then run <code>pytest</code> again. A fix that loops forever never returns; press Ctrl-C to stop the run. To start again, run <code>git checkout -- koans/</code>.</p>
 </article>
@@ -186,6 +186,16 @@ Exercised by: koans/00_how_review_koans_work_test.py:47
 <p class="mistake"><strong>A common mistake:</strong> fixing what the eye lands on. <code>rows = list(rows)</code> copies the input but still reads one generator twice, and <code>filter(...)</code> is one pass too. <code>unsafe_hash=True</code> dedupes equal records but loses one edited after it went into a set. A length check in one direction catches half the bad rows. A traceback can name the wrong line: the <code>02_drop_expired</code> trace points at the <code>for</code> on line 2, but the <code>del</code> on line 4 changed the dict.</p>
 <p class="more">Read more</p>
 <ul class="links"><li><a href="https://docs.python.org/3.13/reference/expressions.html">https://docs.python.org/3.13/reference/expressions.html</a></li><li><a href="https://docs.python.org/3.13/library/dataclasses.html">https://docs.python.org/3.13/library/dataclasses.html</a></li><li><a href="https://docs.python.org/3.13/library/itertools.html">https://docs.python.org/3.13/library/itertools.html</a></li></ul>
+</article>
+
+<article id="python-03">
+<h3><small>03</small>Exceptions</h3>
+<p>Look for: <code>except Exception</code> around code that can fail for more than one reason; a <code>from None</code> inside a handler; a broad handler above a narrower one; <code>continue</code> or <code>pass</code> as the whole handler; a handler that raises again; a name bound by <code>except ... as</code> and read after the block.</p>
+<p>Why it bites: the program keeps going with the wrong answer. A port of <code>80a</code> becomes 8080, and a failed push drops out of the report. The language tries <code>except</code> clauses top to bottom, so a handler below <code>except Exception</code> never runs. <code>from None</code> hides the context in the traceback; it does not delete it, but <code>__cause__</code> stays <code>None</code>, so a caller that reads the cause gets nothing. The language also deletes the <code>as</code> name when its handler ends, even a name bound before <code>try</code>.</p>
+<p>Review habit: Read for what is missing. For each handler, ask which exceptions it catches that its author did not mean, and what record of the failure is left once it has run: a status, an entry in a list, a <code>__cause__</code>. An empty handler, or a <code>from None</code>, is a choice to lose one. Which <code>OSError</code> deleting a directory gives is the platform's: macOS and Linux differ.</p>
+<p class="mistake"><strong>A common mistake:</strong> narrowing in one place only. <code>except (KeyError, ValueError)</code> still turns a bad port into 8080; moving only <code>ValueError</code> up still sends <code>NotFound</code> to 500; <code>append</code> then <code>break</code> reports the first failure only; dropping <code>from None</code> sets the context but not the cause. A chained traceback prints two errors. In the <code>03_parse_order</code> trace, the first is the request's fault (a missing value at column 22) and the last is the code's (line 8). In the <code>03_last_error</code> trace, line 8 fails, but the handler on line 6 deleted the name it reads.</p>
+<p class="more">Read more</p>
+<ul class="links"><li><a href="https://docs.python.org/3.13/tutorial/errors.html">https://docs.python.org/3.13/tutorial/errors.html</a></li><li><a href="https://docs.python.org/3.13/library/exceptions.html">https://docs.python.org/3.13/library/exceptions.html</a></li><li><a href="https://docs.python.org/3.13/reference/compound_stmts.html">https://docs.python.org/3.13/reference/compound_stmts.html</a></li></ul>
 </article>
 </section>
 <footer>Built by <code>tools/lessons.py</code> from the lessons in each track's <code>source/</code> folder. Lessons are under CC BY 4.0; see <code>LICENSE-lessons</code>.</footer>
