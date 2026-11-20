@@ -501,12 +501,14 @@ def test_learner_commands_are_frozen():
 def test_readme_counts_match_the_koans():
     koan_files = sorted((TRACK_DIR / "koans").glob("[0-9][0-9]_*_test.exs"))
     koans = sum(len(re.findall(r'^  koan "', f.read_text(encoding="utf-8"), re.M)) for f in koan_files)
-    readme = (TRACK_DIR.parent / "README.md").read_text(encoding="utf-8")
-    assert f"has {koans} koans in {len(koan_files)} chapters" in readme
-    assert set(re.findall(r"(\d+) of (\d+) koans", readme)) and {
-        total for _, total in re.findall(r"(\d+) of (\d+) koans", readme)
+    text = (TRACK_DIR.parent / "README.md").read_text(encoding="utf-8")
+    intro = text.split("\n## ", 1)[0]
+    section = re.search(r"^## The Elixir track\n.*?(?=^## |\Z)", text, re.S | re.M)[0]
+    assert f"The Elixir track has {koans} koans in {len(koan_files)} chapters" in intro
+    assert set(re.findall(r"(\d+) of (\d+) koans", section)) and {
+        total for _, total in re.findall(r"(\d+) of (\d+) koans", section)
     } == {str(koans)}
-    assert f"All {koans} koans pass" in readme
+    assert f"All {koans} koans pass" in section
 
 
 def test_readme_first_footer_is_what_the_first_blank_prints():

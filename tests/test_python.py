@@ -501,12 +501,73 @@ def test_review_meditations_use_the_frozen_wording(call):
         assert meditation(text, fix_koan, PYTHON) == FIX_MEDITATION.format(file=call.file)
 
 
+README = ROOT / "README.md"
+SETUP_COMMANDS = ("cd python", "uv venv", "uv pip install -r pyproject.toml", "source .venv/bin/activate", "pytest")
+FOOTER_FORMS = (
+    "Replace __ with FINE, or the number of the line with the bug in {path}.",
+    "Not fine: {path} has a bug. Write the number of the line where it is.",
+    "Read {path} again: it is fine. Write FINE.",
+    "Not that line. Look again at {path}.",
+    "A hidden case still fails: {label}",
+    "{answered} of {total} koans answered. Run the whole suite for the rest.",
+    "All {total} koans pass. Start again with: git checkout -- koans/",
+)
+
+
+def readme_part(heading: str | None) -> str:
+    text = README.read_text(encoding="utf-8")
+    if heading is None:
+        return text.split("\n## ", 1)[0]
+    return re.search(rf"^{re.escape(heading)}\n.*?(?=^## |\Z)", text, re.S | re.M)[0]
+
+
+def readme_blocks(section: str) -> list[str]:
+    return re.findall(r"^```[^\n]*\n(.*?)^```", section, re.S | re.M)
+
+
+def koan_total() -> tuple[int, int]:
+    files = sorted((TRACK_DIR / "koans").glob("[0-9][0-9]_*_test.py"))
+    return sum(len(re.findall(r"^def test_", f.read_text(encoding="utf-8"), re.M)) for f in files), len(files)
+
+
 def test_learner_commands_are_frozen():
     project = tomllib.loads((TRACK_DIR / "pyproject.toml").read_text(encoding="utf-8"))
     options = project["tool"]["pytest"]["ini_options"]
     assert "pytest==9.2.0" in project["project"]["dependencies"]
     assert "-x" in options["addopts"].split()
     assert options["testpaths"] == ["koans"]
+    section = readme_part("## The Python track")
+    code_blocks = "\n".join(readme_blocks(section))
+    for command in SETUP_COMMANDS:
+        assert command in code_blocks, command
+    runtime = "\n".join(p.read_text(encoding="utf-8") for p in (TRACK_DIR / "review_koans").glob("*.py"))
+    for form in FOOTER_FORMS:
+        for piece in re.split(r"\{\w+\}", form):
+            assert piece in runtime, piece
+            assert piece in section, piece
+
+
+def test_readme_counts_match_the_koans():
+    koans, chapters = koan_total()
+    intro, section = readme_part(None), readme_part("## The Python track")
+    assert f"The Python track has {koans} koans in {chapters} chapters" in intro
+    totals = {total for _, total in re.findall(r"(\d+) of (\d+) koans", section)}
+    assert totals == {str(koans)}
+    assert f"All {koans} koans pass" in section
+
+
+def test_readme_first_footer_is_what_the_first_blank_prints():
+    text = (TRACK_DIR / "koans" / "00_how_review_koans_work_test.py").read_text(encoding="utf-8")
+    first = koan_lines(text, PYTHON)[0]
+    blank = next(n for n, line in enumerate(text.splitlines(), 1) if n > first and BLANK.search(line))
+    expected = (
+        "Replace __ with the value that makes this true.\n"
+        f"{'-' * 31} The master says {'-' * 32}\n"
+        f"Meditate on koans/00_how_review_koans_work_test.py:{blank}\n"
+        f"    {meditation(text, first, PYTHON)}\n"
+        f"0 of {koan_total()[0]} koans answered.\n"
+    )
+    assert expected in readme_blocks(readme_part("## The Python track"))
 
 
 REVIEW_FILES = [p for p in sorted((TRACK_DIR / "koans" / "review").glob("*.py")) if in_scope(p.name)]
