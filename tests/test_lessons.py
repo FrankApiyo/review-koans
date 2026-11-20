@@ -91,3 +91,36 @@ def test_links_file_is_sorted_and_unique():
     lines = LINKS.read_text(encoding="utf-8").splitlines()
     assert lines == sorted(set(lines))
     assert [line for line in lines if not line.startswith("https://")] == []
+
+
+PAGE = ROOT / "lessons" / "index.html"
+
+
+def test_lessons_page_is_current():
+    import lessons
+
+    assert PAGE.read_text(encoding="utf-8") == lessons.build(), "run: python tools/lessons.py"
+
+
+def test_page_has_no_pictures_or_scripts():
+    page = PAGE.read_text(encoding="utf-8").lower()
+    assert [tag for tag in ("<img", "<svg", "<script") if tag in page] == []
+
+
+def test_every_read_more_link_is_an_anchor():
+    page = PAGE.read_text(encoding="utf-8")
+    anchors = set(re.findall(r'<a href="([^"]+)">', page))
+    linked = {
+        url.rstrip(".,;")
+        for lesson in LESSONS
+        if lesson.text and (more := paragraph(lesson.text, "Read more:"))
+        for url in URL.findall(more)
+    }
+    assert linked and linked <= anchors
+
+
+def test_page_has_light_and_dark_colours():
+    page = PAGE.read_text(encoding="utf-8")
+    assert "color-scheme: light dark" in page
+    assert "prefers-color-scheme: dark" in page
+    assert "<link" not in page

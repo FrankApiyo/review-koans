@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review koans lessons</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #fdfdfb;
+  --fg: #1d2127;
+  --muted: #5b6470;
+  --accent: #5b3a9e;
+  --code-bg: #eeeaf5;
+  --rule: #d9d6e0;
+  --mistake: #fbeee9;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15171b;
+    --fg: #e4e6ea;
+    --muted: #9aa3ae;
+    --accent: #b79cf0;
+    --code-bg: #262a33;
+    --rule: #333844;
+    --mistake: #2b2321;
+  }
+}
+body { background: var(--bg); color: var(--fg); font: 17px/1.55 system-ui, sans-serif; margin: 0; }
+main { max-width: 46rem; margin: 0 auto; padding: 1.5rem 16px 4rem; }
+h1 { font-size: 1.8rem; }
+h2 { font-size: 1.3rem; margin-top: 2.5rem; border-bottom: 1px solid var(--rule); }
+h2 small { color: var(--muted); margin-right: 0.6rem; font-weight: 400; }
+a { color: var(--accent); overflow-wrap: anywhere; }
+code, pre { background: var(--code-bg); border-radius: 4px; font-size: 0.9em; }
+code { padding: 0.05em 0.3em; overflow-wrap: anywhere; }
+pre { padding: 0.7rem 1rem; overflow-x: auto; }
+pre code { padding: 0; }
+.mistake { background: var(--mistake); padding: 0.5rem 0.8rem; border-radius: 4px; }
+.more { color: var(--muted); margin-bottom: 0.2rem; }
+.links { margin-top: 0; }
+nav { display: flex; flex-wrap: wrap; gap: 0.3rem 1rem; }
+footer { color: var(--muted); margin-top: 3rem; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<main>
+<h1>Review koans lessons</h1>
+<p class="lead">The lesson from the top of each chapter. Everything here works offline; only the Read more links leave the page.</p>
+<nav><a href="#elixir">Elixir</a></nav>
+
+<section id="elixir">
+<h2>Elixir</h2>
+<article id="elixir-00">
+<h3><small>00</small>how review koans work</h3>
+<p>Review koans come in three kinds, and each one fails until you answer it.</p>
+<ul><li>Predict: replace <code>__</code> with the value that makes the assertion true.</li><li>Review: read the module in <code>koans/review/</code>, then replace the <code>__</code> in its verdict with <code>:fine</code>, or with the number of the line that holds the bug. About one review in five is fine. After a bug, the next koan has you fix it in place, and hidden checks run your fix.</li><li>Trace: read a real crash captured in <code>traces/</code>, and name its cause and where it came from.</li></ul>
+<p><code>mix test</code> stops at the first koan that fails, and its footer says where to work. A blank:</p>
+<pre><code>Meditate on koans/00_how_review_koans_work_test.exs:34</code></pre>
+<p>A fix names the file to change and the koan that runs its checks. A failing check shows its label, never a raw value or the fix:</p>
+<pre><code>A hidden case still fails: an ordinary discount
+------------------------------- The master says --------------------------------
+Write:        koans/review/00_discount.ex
+Exercised by: koans/00_how_review_koans_work_test.exs:42
+    Fix the bug in koans/review/00_discount.ex in place. The hidden checks name what still fails.
+2 of 5 koans answered.</code></pre>
+<p>The checks are readable in <code>checks/</code>, as the answers are in <code>solutions/</code>. Read them only after a real attempt; reading them first defeats the exercise.</p>
+<p>A compile error stops the run before any footer: fix what the compiler names, then run <code>mix test</code> again. To start again, run <code>git checkout -- koans/</code>.</p>
+</article>
+
+<article id="elixir-01">
+<h3><small>01</small>processes and mailboxes</h3>
+<p>Look for: a <code>receive</code> that can take a message meant for another request (no ref, or a ref left unpinned); a <code>receive</code> with no way out when the other process dies; a loop that leaves unknown messages in its mailbox; and <code>self()</code> called inside the function a new process runs.</p>
+<p>Why it bites: a late reply answers the next request, so one customer sees another's price. A mailbox nothing drains grows until the node runs out of memory. A worker that crashes before it replies leaves its caller waiting forever. Spawning and then monitoring races: a worker that dies first leaves only <code>:noproc</code>, so <code>spawn_monitor</code> sets the monitor as it spawns.</p>
+<p>Review habit: Name the other process. For each <code>send</code>, say who receives it and what happens if that process is dead, slow or never answers. For each <code>receive</code>, say who sends what it matches, and what else could be in the mailbox when it runs. Messages from one process arrive in the order it sent them; that is the only ordering the runtime promises, so a result sent just before its sender exits always arrives before the <code>:DOWN</code>.</p>
+<p class="mistake"><strong>A common mistake:</strong> flushing the mailbox, or adding <code>after</code>, instead of tagging the request. A flush throws away messages meant for other code and misses a reply still on its way; a timeout turns a crash into <code>:timeout</code> and loses the reason. Put a <code>make_ref()</code> in the request and pin it in the <code>receive</code>. With a hand-made ref, the late reply still sits in the mailbox, so a long-lived caller must drop it later or not care. OTP's <code>GenServer.call</code> tags its requests too (chapter 3).</p>
+<p class="more">Read more</p>
+<ul class="links"><li><a href="https://hexdocs.pm/elixir/1.19.5/processes.html">https://hexdocs.pm/elixir/1.19.5/processes.html</a></li><li><a href="https://hexdocs.pm/elixir/1.19.5/Process.html">https://hexdocs.pm/elixir/1.19.5/Process.html</a></li><li><a href="https://www.erlang.org/doc/system/ref_man_processes.html">https://www.erlang.org/doc/system/ref_man_processes.html</a></li></ul>
+</article>
+
+<article id="elixir-02">
+<h3><small>02</small>links monitors and exits</h3>
+<p>Look for: <code>spawn_link</code> or <code>Task.async</code> where the caller must outlive the work; a process that traps exits but has no clause for <code>{:EXIT, pid, :normal}</code>; a monitor still held once the answer came; and <code>Process.exit(pid, :normal)</code> used to stop a process.</p>
+<p>Why it bites: one bad email address takes the notifier down, and every in-flight notification goes with it. A long-lived client that never removes its monitors holds one more for every request, and each server that dies leaves a <code>:DOWN</code> that nothing reads.</p>
+<p>Review habit: Ask what happens on crash. For each process a line starts or watches, say what reaches the other side when it ends, normally or not. The runtime's rules: a link carries an exit signal both ways, and a process that does not trap exits dies of any reason except <code>:normal</code>. Trapping turns the signal into an <code>{:EXIT, pid, reason}</code> message, <code>:normal</code> included. <code>Process.exit(pid, :kill)</code> cannot be trapped, and links and monitors see the reason <code>:killed</code>. A monitor is one-way and delivers one <code>:DOWN</code> message. Linking a <code>Task.async</code> to its caller is Elixir's choice; <code>Task.Supervisor.async_nolink</code> monitors the task without the link.</p>
+<p class="mistake"><strong>A common mistake:</strong> wrapping <code>spawn_link</code> in <code>try/rescue</code>. The crash happens in the other process and arrives as a signal, so no <code>rescue</code> in the caller sees it, and trapping exits in the caller only turns it into mail the caller must read. Start the process unlinked, or monitor it and read the <code>:DOWN</code>. Unlinking after the start (<code>spawn_link</code> then <code>Process.unlink</code>, or <code>Task.async</code> then <code>Task.ignore</code>) leaves a window in which a fast crash still takes the caller. Once the answer is in, <code>Process.demonitor(ref, [:flush])</code> removes the monitor and any <code>:DOWN</code> already waiting.</p>
+<p class="more">Read more</p>
+<ul class="links"><li><a href="https://hexdocs.pm/elixir/1.19.5/Process.html">https://hexdocs.pm/elixir/1.19.5/Process.html</a></li><li><a href="https://hexdocs.pm/elixir/1.19.5/Task.html">https://hexdocs.pm/elixir/1.19.5/Task.html</a></li><li><a href="https://www.erlang.org/doc/apps/erts/erlang.html">https://www.erlang.org/doc/apps/erts/erlang.html</a></li><li><a href="https://www.erlang.org/doc/system/ref_man_processes.html">https://www.erlang.org/doc/system/ref_man_processes.html</a></li></ul>
+</article>
+
+<article id="elixir-03">
+<h3><small>03</small>genserver calls and timeouts</h3>
+<p>Look for: a decision made in the caller on a value an earlier call returned; slow work inside a callback; replies deferred with <code>{:noreply, ...}</code> that are lost or kept after use; <code>from</code> used as a key; a <code>Process.monitor</code> with no <code>:DOWN</code> clause; and a server that calls itself, or calls a server that calls it back.</p>
+<p>Why it bites: two customers both read the last unit and both buy it. One slow refresh holds the server, so every caller queues behind it until its call times out. A registry that monitors clients but never handles <code>:DOWN</code> grows with every client that ends.</p>
+<p>Review habit: Ask what happens with two at once. A server runs one callback at a time, so a check and the act that depends on it are safe together only inside one callback; between two calls, another caller's request can run. For each callback, ask who else waits while it runs. A <code>from</code> kept for <code>GenServer.reply/2</code> is answered once, then dropped. <code>from</code> holds the caller's pid and a tag that is new on every call; the tag's shape is OTP's internal, so key by the pid. A monitor delivers one <code>:DOWN</code>, and a clause has to handle it. <code>{:continue, ...}</code> returned from <code>init</code> runs before the server takes any message.</p>
+<p class="mistake"><strong>A common mistake:</strong> catching a call's timeout and treating the request as cancelled. The caller exits with <code>{:timeout, ...}</code>, but the server keeps working on it. Since OTP 24 a reply that arrives after <code>GenServer.call</code> gave up is dropped rather than left in the caller's mailbox: OTP's <code>gen_server:call</code> docs say so, Elixir's <code>GenServer.call</code> docs still describe the older behaviour, and it holds for calls, not hand-made requests (chapter 1). Move slow work into a <code>Task</code> that sends its result back to <code>handle_info</code>. OTP's <code>gen_server:call</code> refuses a call to the caller's own server: the caller exits with <code>:calling_self</code>. Two servers that call each other each wait for the other until one call times out, or for ever with <code>:infinity</code>.</p>
+<p class="more">Read more</p>
+<ul class="links"><li><a href="https://hexdocs.pm/elixir/1.19.5/GenServer.html">https://hexdocs.pm/elixir/1.19.5/GenServer.html</a></li><li><a href="https://hexdocs.pm/elixir/1.19.5/Task.html">https://hexdocs.pm/elixir/1.19.5/Task.html</a></li><li><a href="https://www.erlang.org/doc/apps/stdlib/gen_server.html">https://www.erlang.org/doc/apps/stdlib/gen_server.html</a></li></ul>
+</article>
+
+<article id="elixir-04">
+<h3><small>04</small>supervision and restarts</h3>
+<p>Look for: a child listed before a sibling its <code>init</code> calls; a sibling's pid kept from <code>init</code> under a strategy that restarts the sibling alone; the default <code>:permanent</code> on work that runs once; an <code>init</code> that crashes when a call in it fails; and code that expects a restarted process to keep its state.</p>
+<p>Why it bites: while the database is down the app will not boot, health check included. After a producer restarts, every event goes to a dead pid. A finished warm-up job is restarted until its supervisor gives up, which the one above restarts if <code>:permanent</code>.</p>
+<p>Review habit: Read for what is missing: a <code>restart:</code> option, an <code>{:error, _}</code> branch, a sibling that has to start first. In a trace, start from the first app frame. OTP documents these rules. A supervisor starts its children in list order, one start returning before the next begins, and stops them in reverse. A restarted child starts again from <code>init</code>. <code>:permanent</code> restarts on any exit, <code>:transient</code> only on a reason other than <code>:normal</code>, <code>:shutdown</code> or <code>{:shutdown, _}</code>, and <code>:temporary</code> never. When a child is to be restarted, <code>:one_for_one</code> restarts only it, <code>:rest_for_one</code> also the children after it, and <code>:one_for_all</code> every child. After more than <code>max_restarts</code> restarts in <code>max_seconds</code>, the supervisor stops its children and exits with <code>:shutdown</code>; Elixir's <code>Supervisor</code> defaults to 3 in 5 seconds, Erlang's <code>supervisor</code> to 1 in 5. A crash in <code>init</code> fails the child's start, so the tree does not boot; a crash in <code>handle_continue</code> comes after the start returned.</p>
+<p class="mistake"><strong>A common mistake:</strong> <code>:one_for_all</code> so a consumer gets the restarted producer's pid; a consumer crash then restarts the producer too, and its state is lost. Put the producer first under <code>:rest_for_one</code>, or have the consumer look the producer up by name on each call. Raising <code>max_restarts</code> only lets a job that is restarted after every stop run more times, and catching the exit in a cache's <code>init</code> boots it empty.</p>
+<p class="more">Read more</p>
+<ul class="links"><li><a href="https://hexdocs.pm/elixir/1.19.5/Supervisor.html">https://hexdocs.pm/elixir/1.19.5/Supervisor.html</a></li><li><a href="https://www.erlang.org/doc/apps/stdlib/supervisor.html">https://www.erlang.org/doc/apps/stdlib/supervisor.html</a></li><li><a href="https://www.erlang.org/doc/system/sup_princ.html">https://www.erlang.org/doc/system/sup_princ.html</a></li></ul>
+</article>
+
+<article id="elixir-05">
+<h3><small>05</small>ets</h3>
+<p>Look for: a <code>lookup</code> or <code>member</code> check followed by a separate write; a table written by processes other than its owner while it is <code>:protected</code>; a table created by whichever process calls first; and a match spec's guard at a boundary, or a <code>select_delete</code> whose body is not <code>true</code>.</p>
+<p>Why it bites: two workers both see a job as free, and both process it. A rate limiter raises <code>ArgumentError</code> on every request from its first deploy. Feature flags vanish when the request that happened to create their table ends.</p>
+<p>Review habit: Ask what happens with two at once. OTP documents each update of a single object as atomic and isolated, but nothing holds between two calls: another process can write in the gap. <code>insert_new</code> writes only if the key is absent, and <code>update_counter</code> adds in place, so put the decision in the call that writes. A table belongs to the process that created it and is deleted when that process dies, unless it has an <code>:heir</code>; OTP's docs do not say whether that happens before or after the owner's <code>:DOWN</code>. <code>:protected</code>, the default, lets any process read and only the owner write; <code>:public</code> lets any process write; <code>:private</code> keeps both to the owner. <code>read_concurrency</code> and <code>write_concurrency</code> are performance tuning: they change neither access nor atomicity. A <code>:set</code> keeps one object per key, a <code>:bag</code> each distinct object, a <code>:duplicate_bag</code> every copy, and an <code>:ordered_set</code> walks its keys in term order. <code>select_delete</code> deletes only the rows for which the match spec returns <code>true</code>.</p>
+<p class="mistake"><strong>A common mistake:</strong> keeping a <code>lookup</code> or <code>member</code> check in front of the write. Two callers both pass it before either writes. Let the write decide alone: <code>insert_new</code> and its result, <code>update_counter</code> with a default row, or one call in which the owner checks and writes. Create a shared table in the <code>init</code> of a supervised process, never on first use.</p>
+<p class="more">Read more</p>
+<ul class="links"><li><a href="https://www.erlang.org/doc/apps/stdlib/ets.html">https://www.erlang.org/doc/apps/stdlib/ets.html</a></li><li><a href="https://www.erlang.org/doc/apps/erts/match_spec.html">https://www.erlang.org/doc/apps/erts/match_spec.html</a></li></ul>
+</article>
+
+<article id="elixir-06">
+<h3><small>06</small>ecto queries and transactions</h3>
+<p>Look for: a <code>get!</code> or query that takes an id but not the signed-in user; a <code>cast</code> that permits <code>user_id</code>; SQL built by interpolating a string; a notification sent inside <code>Repo.transact</code>; <code>Repo.preload</code> called once per row; and a count written back from a struct loaded earlier.</p>
+<p>Why it bites: anyone who edits the id in a URL reads someone else's post. A "welcome" email goes out for a signup that rolled back. A profile page runs 501 queries. Two tabs count one view.</p>
+<p>Review habit: Ask who supplied the value. Ids, form params and search text come from the client. Scope the query by the session's user, so "not yours" raises the same <code>Ecto.NoResultsError</code> as "not there" (<code>get!</code>, <code>get_by!</code> and <code>one!</code> raise it; <code>get</code> and <code>one</code> return <code>nil</code>), and <code>cast</code> only the fields a user may set. Pass values as parameters: Ecto sends each <code>^</code> value apart from the SQL text, <code>Repo.query!/2</code> takes <code>?</code> on SQLite and <code>$1</code> on Postgres, and Ecto rejects an interpolated string as <code>fragment</code>'s SQL at compile time. <code>Repo.transact/2</code>, Ecto's choice since 3.13, commits on <code>{:ok, _}</code> and rolls back on <code>{:error, _}</code>; the soft-deprecated <code>transaction/2</code> commits whatever the function returns. A Multi checks the changesets it was given before the transaction starts. <code>update_all</code> and <code>insert_all</code> take no changeset and fill no timestamps, so a NOT NULL timestamp fails with the driver's error (<code>Exqlite.Error</code> here, <code>Postgrex.Error</code> on Postgres); <code>update_all</code> with <code>inc:</code> is one <code>UPDATE</code>. A unique index raises <code>Ecto.ConstraintError</code> unless the changeset declares <code>unique_constraint/3</code> under the index's name: Postgres reports that name, while <code>ecto_sqlite3</code> builds it from the table and columns SQLite reports.</p>
+<p class="mistake"><strong>A common mistake:</strong> notifying as the transaction's last step. The commit can still fail, so notify once <code>Repo.transact</code> has returned <code>{:ok, _}</code>. And a preload through an inner <code>join:</code> drops posts that have no comments; <code>left_join:</code> keeps them.</p>
+<p class="more">Read more</p>
+<ul class="links"><li><a href="https://hexdocs.pm/ecto/3.14.3/Ecto.Repo.html">https://hexdocs.pm/ecto/3.14.3/Ecto.Repo.html</a></li><li><a href="https://hexdocs.pm/ecto/3.14.3/Ecto.Query.html">https://hexdocs.pm/ecto/3.14.3/Ecto.Query.html</a></li><li><a href="https://hexdocs.pm/ecto/3.14.3/Ecto.Multi.html">https://hexdocs.pm/ecto/3.14.3/Ecto.Multi.html</a></li></ul>
+</article>
+
+<article id="elixir-07">
+<h3><small>07</small>liveview</h3>
+<p>Look for: a <code>handle_event</code> that acts on an id without asking whose it is; a <code>phx-value-*</code> compared with an integer; <code>String.to_atom</code> on anything a client sent; one PubSub topic for every user's private items; and URL state read in <code>mount</code> but not in <code>handle_params</code>.</p>
+<p>Why it bites: a client can send any event with any value, as <code>render_click/3</code> does here, so hiding a button guards nothing. Someone deletes another user's note; a pick never shows, because <code>"2" == 2</code> is false; the node stops when its atom table fills, since atoms are never garbage collected; a private item appears in someone else's feed.</p>
+<p>Review habit: Ask who supplied the value. Params, <code>phx-value-*</code> values and the URL come from the client; a <code>phx-value-*</code> attribute is text, so it arrives as a string. LiveView documents that <code>mount/3</code> runs twice, for the plain HTTP render and again once the socket connects (<code>connected?/1</code> tells them apart), that a routed view's <code>handle_params/3</code> runs after <code>mount</code> and on every patch, and that <code>push_patch</code> keeps the process, <code>push_navigate</code> mounts a new one and <code>redirect</code> reloads the page. So authorise in the handler against the session's user, and answer "not yours" as you answer "not there"; map column names through an allow-list; read URL state in <code>handle_params</code>; broadcast private data on a per-user topic, since PubSub delivers every message on a topic to each subscriber. A forged or malformed value may stop the forger's own view, so this course accepts <code>String.to_integer</code>, <code>String.to_existing_atom</code> and guards with no fallback clause; it asks that no other user's data is shown or changed and no atom is made. A LiveView with no <code>handle_info/2</code> logs a stray message at debug level and carries on: that is LiveView's choice. A <code>handle_info</code> with no catch-all crashes on it.</p>
+<p class="mistake"><strong>A common mistake:</strong> dropping other users' items in <code>handle_info</code>. The checks pass, but each private item still reaches every subscriber's process.</p>
+<p class="more">Read more</p>
+<ul class="links"><li><a href="https://hexdocs.pm/phoenix_live_view/1.1.33/Phoenix.LiveView.html">https://hexdocs.pm/phoenix_live_view/1.1.33/Phoenix.LiveView.html</a></li><li><a href="https://hexdocs.pm/phoenix_live_view/1.1.33/security-model.html">https://hexdocs.pm/phoenix_live_view/1.1.33/security-model.html</a></li><li><a href="https://hexdocs.pm/phoenix_pubsub/2.4.1/Phoenix.PubSub.html">https://hexdocs.pm/phoenix_pubsub/2.4.1/Phoenix.PubSub.html</a></li></ul>
+</article>
+
+<article id="elixir-08">
+<h3><small>08</small>quire</h3>
+<p>Look for: what each function leaves out. The code is shaped like Quire, the notes app from the phoenix-koans course: an id used without <code>Id.cast</code>, search text sent to FTS5 as typed, a page cursor with no tiebreak, an upsert's returned rows taken as every row, a broadcast that ignores the result, and a form save that checks no version.</p>
+<p>Why it bites: <code>Ecto.Type.cast(:id, _)</code> accepts any integer, but SQLite integers are 64-bit, so a longer id from a URL raises in the driver. In an FTS5 query a <code>"</code> ends a phrase, and <code>NOT</code> or <code>body:</code> are syntax. Notes saved in the same second share an <code>updated_at</code>, so a cursor on it alone skips or repeats them; an offset shifts whenever a newer note is saved. With <code>on_conflict: :nothing</code>, <code>returning</code> gives back only the rows inserted. A second tab's save overwrites the first.</p>
+<p>Review habit: Read for what is missing: the id's range; the owner, so every query is scoped by the session's user and "not yours" reads as "not there"; a tiebreak column; the rows the insert skipped; the <code>{:error, _}</code> branch; the version the form was rendered with. Scope PubSub topics by user as well, since each subscriber gets every message on its topic. <code>ecto_sqlite3</code> stores <code>utc_datetime</code> as ISO-8601 text, which is the adapter's choice, so <code>&lt;</code> compares strings, and the fixed width keeps that in time order. Inside FTS5 quotes, <code>""</code> is one quote; dropping quotes works too, as the default tokenizer ignores them. <code>optimistic_lock/3</code> plus <code>stale_error_field:</code> turns a stale save into <code>{:error, changeset}</code>; without that option, <code>Repo.update</code> raises <code>Ecto.StaleEntryError</code>.</p>
+<p class="mistake"><strong>A common mistake:</strong> a row-value cursor, <code>fragment("(?, ?) &lt; (?, ?)", ...)</code>, with the timestamp pinned untyped. exqlite then sends it without its <code>Z</code>, so it never equals the stored text; write <code>type(^updated_at, :utc_datetime)</code>.</p>
+<p class="more">Read more</p>
+<ul class="links"><li><a href="https://hexdocs.pm/ecto/3.14.3/Ecto.Changeset.html">https://hexdocs.pm/ecto/3.14.3/Ecto.Changeset.html</a></li><li><a href="https://hexdocs.pm/ecto_sqlite3/0.26.0/Ecto.Adapters.SQLite3.html">https://hexdocs.pm/ecto_sqlite3/0.26.0/Ecto.Adapters.SQLite3.html</a></li><li><a href="https://hexdocs.pm/phoenix_pubsub/2.4.1/Phoenix.PubSub.html">https://hexdocs.pm/phoenix_pubsub/2.4.1/Phoenix.PubSub.html</a></li></ul>
+</article>
+</section>
+<footer>Built by <code>tools/lessons.py</code> from the lessons in each track's <code>source/</code> folder. Lessons are under CC BY 4.0; see <code>LICENSE-lessons</code>.</footer>
+</main>
+</body>
+</html>
