@@ -214,7 +214,7 @@ When every koan passes, the footer changes:
 All 69 koans pass. Start again with: git checkout -- koans/
 ```
 
-Chapter 05 has one exercise on file paths (5.8). It is POSIX only.
+The exercise on `koans/review/05_read_upload.py` builds a file path. It is POSIX only.
 
 Do not try the injection exercise in chapter 05 by running a shell command. Read the code and answer from the code.
 
@@ -230,7 +230,7 @@ This restores every blank.
 
 ```sh
 pytest koans/01_shared_mutable_state_test.py
-pytest koans/01_shared_mutable_state_test.py::test_name
+pytest koans/01_shared_mutable_state_test.py::test_lambdas_built_in_a_loop
 ```
 
 ### Running from Neovim

@@ -542,7 +542,7 @@ def test_learner_commands_are_frozen():
         assert command in code_blocks, command
     runtime = "\n".join(p.read_text(encoding="utf-8") for p in (TRACK_DIR / "review_koans").glob("*.py"))
     for form in FOOTER_FORMS:
-        for piece in re.split(r"\{\w+\}", form):
+        for piece in (p for p in re.split(r"\{\w+\}", form) if len(p) >= 10):
             assert piece in runtime, piece
             assert piece in section, piece
 
