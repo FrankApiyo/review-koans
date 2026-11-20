@@ -19,6 +19,7 @@ def not_active(review):
     assert review.can_login(parsed("act")) is False
     assert review.can_login(parsed("")) is False
     assert review.can_login(parsed("active_pending")) is False
+    assert review.can_login(parsed("inactive")) is False
 
 
 CASES = [

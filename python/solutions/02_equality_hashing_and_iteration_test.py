@@ -1,12 +1,16 @@
 """
-Look for: `is` between values; a one-item tuple written without its comma; a dataclass with
-`eq=False`, or a hash over fields that can still change; a generator or iterator read twice; a
-dict or list changed inside a loop over it; `zip` over inputs that may differ in length.
+Look for: `is` between values; a one-item tuple written without its comma; NaN in a comparison
+or a lookup; a dataclass with `eq=False`, or a hash over fields that can still change; a
+generator or iterator read twice; a dict or list changed inside a loop over it; `zip` over
+inputs that may differ in length.
 
-Why it bites: none of these raise. `("active")` is a string, so `in` matches any part of it. A
-generator is empty after one full pass, so a second `sum` over it is 0. `zip` stops at the
-shorter input. With `eq=False`, equal records compare and hash by identity, so a set keeps both.
-The answer is just smaller: a row, a duplicate or a refusal goes missing.
+Why it bites: most of these raise nothing. A parenthesised string like `("x")` is still a
+string, so `in` matches any part of it. A generator is empty after one full pass, so a second
+`sum` over it is 0. `zip` stops at the shorter input. With `eq=False`, equal records compare and
+hash by identity, so a set keeps both. NaN is not equal to itself, but `in` tries `is` before
+`==` (the language's rule), so the same NaN object is found and a fresh one is not. A list loop
+walks by index, so removing an item shifts the next one under the index and it is skipped. A
+dict is the exception: changing its size inside the loop raises `RuntimeError` at the `for`.
 
 Review habit: Ask who supplied the value. `is` compares identity, which is the language's rule;
 whether a string parsed from JSON is the same object as the literal in your source is CPython's
@@ -15,9 +19,9 @@ header row and a data row come from different places and can disagree in length.
 
 A common mistake: fixing what the eye lands on. `rows = list(rows)` copies the input but still
 reads one generator twice, and `filter(...)` is one pass too. `unsafe_hash=True` dedupes equal
-SKUs but loses one edited after it went into a set; `frozen=True` refuses the edit. A length
-check in one direction catches half the bad rows. A traceback can name the wrong line: the
-`02_drop_expired` trace points at the `for` on line 2, but the `del` on line 4 changed the dict.
+records but loses one edited after it went into a set. A length check in one direction catches
+half the bad rows. A traceback can name the wrong line: the `02_drop_expired` trace points at
+the `for` on line 2, but the `del` on line 4 changed the dict.
 
 Read more: https://docs.python.org/3.13/reference/expressions.html,
 https://docs.python.org/3.13/library/dataclasses.html,
