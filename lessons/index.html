@@ -47,7 +47,7 @@ footer { color: var(--muted); margin-top: 3rem; font-size: 0.9rem; }
 <main>
 <h1>Review koans lessons</h1>
 <p class="lead">The lesson from the top of each chapter. Everything here works offline; only the Read more links leave the page.</p>
-<nav><a href="#elixir">Elixir</a></nav>
+<nav><a href="#elixir">Elixir</a><a href="#python">Python</a></nav>
 
 <section id="elixir">
 <h2>Elixir</h2>
@@ -146,6 +146,26 @@ Exercised by: koans/00_how_review_koans_work_test.exs:42
 <p class="mistake"><strong>A common mistake:</strong> a row-value cursor, <code>fragment("(?, ?) &lt; (?, ?)", ...)</code>, with the timestamp pinned untyped. exqlite then sends it without its <code>Z</code>, so it never equals the stored text; write <code>type(^updated_at, :utc_datetime)</code>.</p>
 <p class="more">Read more</p>
 <ul class="links"><li><a href="https://hexdocs.pm/ecto/3.14.3/Ecto.Changeset.html">https://hexdocs.pm/ecto/3.14.3/Ecto.Changeset.html</a></li><li><a href="https://hexdocs.pm/ecto_sqlite3/0.26.0/Ecto.Adapters.SQLite3.html">https://hexdocs.pm/ecto_sqlite3/0.26.0/Ecto.Adapters.SQLite3.html</a></li><li><a href="https://hexdocs.pm/phoenix_pubsub/2.4.1/Phoenix.PubSub.html">https://hexdocs.pm/phoenix_pubsub/2.4.1/Phoenix.PubSub.html</a></li></ul>
+</article>
+</section>
+
+<section id="python">
+<h2>Python</h2>
+<article id="python-00">
+<h3><small>00</small>How review koans work</h3>
+<p>Review koans come in three kinds, and each one fails until you answer it.</p>
+<ul><li>Predict: replace <code>__</code> with the value that makes the assertion true.</li><li>Review: read the module in <code>koans/review/</code>, then replace the <code>__</code> in its verdict with <code>FINE</code>, or with the number of the line that holds the bug. About one review in five is fine. After a bug, the next koan has you fix it in place, and hidden checks run your fix.</li><li>Trace: read a real crash captured in <code>traces/</code>, and name its cause and where it came from.</li></ul>
+<p><code>pytest</code> stops at the first koan that fails, and its footer says where to work. A blank:</p>
+<pre><code>Meditate on koans/00_how_review_koans_work_test.py:37</code></pre>
+<p>A fix names the file to change and the koan that runs its checks. A failing check shows its label, never a raw value or the fix:</p>
+<pre><code>A hidden case still fails: an ordinary discount
+------------------------------- The master says --------------------------------
+Write:        koans/review/00_discount.py
+Exercised by: koans/00_how_review_koans_work_test.py:47
+    Fix the bug in koans/review/00_discount.py in place. The hidden checks name what still fails.
+2 of 5 koans answered.</code></pre>
+<p>The checks are readable in <code>checks/</code>, as the answers are in <code>solutions/</code>. Read them only after a real attempt; reading them first defeats the exercise.</p>
+<p>An import error in a koan file stops the run before any footer: fix what the traceback names, then run <code>pytest</code> again. A fix that loops forever never returns; press Ctrl-C to stop the run. To start again, run <code>git checkout -- koans/</code>.</p>
 </article>
 </section>
 <footer>Built by <code>tools/lessons.py</code> from the lessons in each track's <code>source/</code> folder. Lessons are under CC BY 4.0; see <code>LICENSE-lessons</code>.</footer>

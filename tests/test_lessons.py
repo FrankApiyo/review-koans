@@ -156,15 +156,21 @@ def test_inline_escapes_html_and_sets_code():
     )
 
 
-def test_articles_follow_chapter_order_with_readable_titles():
+TRACKS_WITH_SOURCES = [track for track in DIALECTS if (ROOT / track / "source").is_dir()]
+
+
+@pytest.mark.parametrize("track", TRACKS_WITH_SOURCES)
+def test_articles_follow_chapter_order_with_readable_titles(track):
     import lessons
 
     page = PAGE.read_text(encoding="utf-8")
-    chapters = [path.name[:2] for path in sorted((ROOT / "elixir" / "source").glob("*_test.exs"))]
-    assert re.findall(r'<article id="elixir-(\d\d)">', page) == chapters
-    titles = re.findall(r"<h3><small>\d\d</small>([^<]+)</h3>", page)
-    assert titles[1] == "Processes and mailboxes"
-    assert titles == [lessons.TITLES[name] for _, name, _ in lessons.chapters(ROOT, "elixir")]
+    section = re.search(rf'<section id="{track}">\n(.*?)</section>', page, re.DOTALL)
+    assert section, f"the page has no {track} section"
+    sources = sorted((ROOT / track / "source").glob(DIALECTS[track].test_glob))
+    assert re.findall(rf'<article id="{track}-(\d\d)">', section[1]) == [path.name[:2] for path in sources]
+    titles = re.findall(r"<h3><small>\d\d</small>([^<]+)</h3>", section[1])
+    assert titles[0] == "How review koans work"
+    assert titles == [lessons.TITLES[name] for _, name, _ in lessons.chapters(ROOT, track)]
 
 
 def test_chapter_without_lesson_is_an_error(tmp_path):

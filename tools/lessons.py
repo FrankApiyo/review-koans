@@ -29,6 +29,11 @@ TITLES = {
     "ecto queries and transactions": "Ecto queries and transactions",
     "liveview": "LiveView",
     "quire": "Quire",
+    "shared mutable state": "Shared mutable state",
+    "equality hashing and iteration": "Equality, hashing and iteration",
+    "exceptions": "Exceptions",
+    "asyncio": "asyncio",
+    "money time files and injection": "Money, time, files and injection",
 }
 
 STYLE = """\

@@ -1,0 +1,12 @@
+exit 1
+--- stdout
+4.0
+--- stderr
+Traceback (most recent call last):
+  File "traces/00_divide.py", line 6, in <module>
+    print(average([]))
+          ~~~~~~~^^^^
+  File "traces/00_divide.py", line 2, in average
+    return sum(scores) / len(scores)
+           ~~~~~~~~~~~~^~~~~~~~~~~~~
+ZeroDivisionError: division by zero
