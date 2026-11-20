@@ -24,7 +24,9 @@ COLOURLESS = {"NO_COLOR": "1", "FORCE_COLOR": "0", "PYTHON_COLORS": "0"}
 TIMESTAMP = re.compile(r"^\d\d:\d\d:\d\d\.\d{3} ", re.M)
 FILE_URL = "file://"
 # Machine paths only: a route such as /ch07/notes/1 is course output.
-FILESYSTEM_ROOTS = ("/" + "Users/", "/" + "home/", "/private/", "/var/folders/", "/tmp/")
+FILESYSTEM_ROOTS = (
+    "/" + "Users/", "/" + "home/", "/private/", "/var/folders/", "/tmp/", "/opt/", "/usr/", "/nix/"
+)
 # LiveView's ids are 16 url-safe base64 characters; phx- attributes are lower case.
 LIVEVIEW_ID = re.compile(r"(?<![\w-])phx-(?=[\w-]{0,15}[A-Z0-9])[\w-]{16}(?![\w-])", re.ASCII)
 RUNTIME_APPS = "stdlib|kernel|elixir|mix|ex_unit|logger|compiler|iex"

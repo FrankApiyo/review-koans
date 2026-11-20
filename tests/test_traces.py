@@ -84,6 +84,9 @@ FILESYSTEM_ROOTS = {
     "private": "/private/var/tmp/",
     "var_folders": "/var/folders/xy/T/",
     "tmp": "/tmp/",
+    "opt": "/opt/homebrew/Cellar/erlang/",
+    "usr": "/usr/local/lib/erlang/",
+    "nix": "/nix/store/",
     "path_home": f"{HOME}/",
     "repo_root": f"{ROOT}/",
 }

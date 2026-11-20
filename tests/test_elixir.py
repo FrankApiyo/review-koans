@@ -47,6 +47,8 @@ REAL_CLOCK = re.compile(
     r"|(Naive)?DateTime\.utc_now|Date\.utc_today|:os\.timestamp|^\s*after\b"
 )
 SERVES = re.compile(r"server:\s*true")
+TIMED_RECEIVE = re.compile(r"\b(?:assert|refute)_receive\b")
+DEPRECATED_TRANSACTION = re.compile(r"\bRepo\.transaction\(")
 PERSONAL = ("/" + "Users/", "/" + "home/")
 VERDICT_ENDING = "Write :fine, or the line number of the bug."
 FIX_MEDITATION = "Fix the bug in koans/review/{file} in place. The hidden checks name what still fails."
@@ -362,6 +364,15 @@ def test_no_real_clock_in_course_code():
 
 
 # 11. Hygiene.
+
+
+def test_verify_waits_without_a_clock():
+    assert static_hits(files_under(TRACK_DIR, ("verify",), (".ex", ".exs")), TIMED_RECEIVE) == []
+
+
+def test_support_and_reviews_use_transact():
+    paths = files_under(TRACK_DIR, ("lib", "checks", "verify", "source/review"), (".ex", ".exs"))
+    assert static_hits(paths, DEPRECATED_TRANSACTION) == []
 
 
 def tree_files(tree: str) -> list[str]:

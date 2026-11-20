@@ -23,7 +23,7 @@ defmodule Support.Db do
   @doc "Deletes every row of every course table and restarts their ids at 1."
   @spec reset!() :: :ok
   def reset! do
-    {:ok, :ok} = Repo.transaction(&delete_rows/0)
+    {:ok, :ok} = Repo.transact(&delete_rows/0)
     :ok
   end
 
@@ -31,7 +31,7 @@ defmodule Support.Db do
     Repo.query!("PRAGMA defer_foreign_keys = ON")
     Enum.each(Repo.query!(@course_tables).rows, fn [table] -> delete_all(table) end)
     if sequence?(), do: delete_all("sqlite_sequence")
-    :ok
+    {:ok, :ok}
   end
 
   defp delete_all(table), do: Repo.query!(~s(DELETE FROM "#{table}"))

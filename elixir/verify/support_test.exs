@@ -99,16 +99,16 @@ defmodule Verify.SupportTest do
 
     {pid, ref} =
       spawn_monitor(fn ->
-        Repo.transaction(fn ->
+        Repo.transact(fn ->
           insert_owner!("bob")
           send(test, :inserted)
-          receive do: (:never -> :ok)
+          receive do: (:never -> {:ok, :never})
         end)
       end)
 
-    assert_receive :inserted
+    receive do: (:inserted -> :ok)
     Process.exit(pid, :kill)
-    assert_receive {:DOWN, ^ref, :process, ^pid, :killed}
+    receive do: ({:DOWN, ^ref, :process, ^pid, reason} -> assert reason == :killed)
 
     assert rows("SELECT id, name FROM verify_owners") == [[1, "ada"]]
     assert insert_owner!("cy") == 2

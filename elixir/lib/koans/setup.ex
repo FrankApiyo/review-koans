@@ -10,12 +10,12 @@ defmodule Koans.Setup do
   ]
 
   # A crash report that lands after its koan ends would print a check's input;
-  # with capture_log on, no other log reaches the default handler.
+  # with capture_log on, no other log reaches the default handler. The handler goes only
+  # once the database is up, so a failed connect still logs its cause.
   @spec start!() :: :ok
   def start! do
-    _ = :logger.remove_handler(:default)
     put_env()
-    Enum.each(Db.files(), &File.rm/1)
+    Enum.each(Db.files(), &remove_stale!/1)
 
     {:ok, _} =
       Supervisor.start_link(
@@ -24,7 +24,17 @@ defmodule Koans.Setup do
         name: Support.Supervisor
       )
 
-    Support.Migrations.run!()
+    :ok = Support.Migrations.run!()
+    _ = :logger.remove_handler(:default)
+    :ok
+  end
+
+  defp remove_stale!(file) do
+    case File.rm(file) do
+      :ok -> :ok
+      {:error, :enoent} -> :ok
+      {:error, reason} -> raise File.Error, reason: reason, action: "remove", path: file
+    end
   end
 
   defp put_env do
