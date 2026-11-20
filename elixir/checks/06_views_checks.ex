@@ -20,16 +20,19 @@ defmodule Checks.Ch06.Views do
          :ok = Support.Db.reset!()
          assert {:ok, 2} = Hidden.isolated(&two_tabs/0)
        end},
-      {:exploit, "a view reads the count, then writes it in a second query",
+      {:exploit, "a view reads the post before it writes the count",
        fn ->
          :ok = Support.Db.reset!()
          post = Db.post!(Db.user!("ada"), "hot")
-
-         assert {{:ok, :ok}, [<<"UPDATE ", _::binary>>]} =
-                  Db.queries_during(fn -> Views.bump(post) end)
+         assert {{:ok, :ok}, queries} = Db.queries_during(fn -> Views.bump(post) end)
+         assert [] = Enum.filter(queries, &select?/1)
        end}
     ]
   end
+
+  # Only a read of the post can make the count stale; a transaction's begin and commit cannot.
+  defp select?(sql),
+    do: sql |> String.trim_leading() |> String.upcase() |> String.starts_with?("SELECT")
 
   defp one_load do
     post = Db.post!(Db.user!("ada"), "hot")

@@ -15,15 +15,15 @@ defmodule Checks.Ch06.Transfer do
          :ok = Support.Db.reset!()
          assert {:ok, {:new_owner, :new_owner}} = Hidden.isolated(&hand_over/0)
        end},
-      {:exploit, "someone who did not write a post gives it away",
-       fn ->
-         :ok = Support.Db.reset!()
-         assert {:ok, {{:error, :not_found}, :author}} = Hidden.isolated(&not_yours/0)
-       end},
       {:exploit, "a missing post is not reported as :not_found",
        fn ->
          :ok = Support.Db.reset!()
          assert {:ok, {:error, :not_found}} = Hidden.isolated(&missing/0)
+       end},
+      {:exploit, "someone who did not write a post gives it away",
+       fn ->
+         :ok = Support.Db.reset!()
+         assert {:ok, {{:error, :not_found}, :author}} = Hidden.isolated(&not_yours/0)
        end}
     ]
   end

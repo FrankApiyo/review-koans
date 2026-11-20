@@ -15,8 +15,12 @@ defmodule Review.Ch06.Views do
     # === fixed
     require Ecto.Query
     {1, _} = Repo.update_all(Ecto.Query.where(Post, id: ^post.id), inc: [views: 1])
-    # === alt: one SQL UPDATE that adds to the stored count
-    Repo.query!("UPDATE blog_posts SET views = views + 1 WHERE id = ?", [post.id])
+    # === alt: one SQL update, in lower case, that adds to the stored count
+    Repo.query!("update blog_posts set views = views + 1 where id = ?", [post.id])
+    # === alt: the same update_all, inside a transaction
+    require Ecto.Query
+    query = Ecto.Query.where(Post, id: ^post.id)
+    {:ok, {1, _}} = Repo.transact(fn -> {:ok, Repo.update_all(query, inc: [views: 1])} end)
     # === wrong: refuses — counts nothing
     _ = post
     # === wrong: partial — reads the post again, then writes the count back in a second query

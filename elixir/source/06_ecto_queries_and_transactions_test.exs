@@ -18,8 +18,9 @@ defmodule Koans.Ch06.EctoQueriesAndTransactionsTest do
   `Repo.transact/2`, Ecto's choice since 3.13, commits on `{:ok, _}` and rolls back on
   `{:error, _}`; the soft-deprecated `transaction/2` commits whatever the function returns. A
   Multi checks the changesets it was given before the transaction starts. `update_all` and
-  `insert_all` take no changeset and fill no timestamps; `update_all` with `inc:` is one
-  `UPDATE`. A unique index raises `Ecto.ConstraintError` unless the changeset declares
+  `insert_all` take no changeset and fill no timestamps, so a NOT NULL timestamp fails with the
+  driver's error (`Exqlite.Error` here, `Postgrex.Error` on Postgres); `update_all` with `inc:`
+  is one `UPDATE`. A unique index raises `Ecto.ConstraintError` unless the changeset declares
   `unique_constraint/3` under the index's name: Postgres reports that name, while ecto_sqlite3
   builds it from the table and columns SQLite reports.
 
@@ -71,7 +72,7 @@ defmodule Koans.Ch06.EctoQueriesAndTransactionsTest do
     assert Repo.aggregate(Post, :count) == _a(1)
   end
 
-  koan "update_all renames a post last updated on 2026-01-01, then insert_all adds a post with no timestamps. What does update_all return, is updated_at still the old value, and which exception module does insert_all raise?" do
+  koan "update_all renames a post last updated on 2026-01-01, then insert_all adds a post with no timestamps. What does update_all return, is updated_at still the old value, and which exception module does insert_all raise on SQLite?" do
     :ok = Support.Db.reset!()
     ada = Repo.insert!(%User{email: "ada@example.com"})
     old = ~U[2026-01-01 00:00:00Z]
@@ -86,7 +87,7 @@ defmodule Koans.Ch06.EctoQueriesAndTransactionsTest do
     assert raised(bulk) == _a(Exqlite.Error)
   end
 
-  koan "Read traces/06_get_post.exs.trace: Bob opens Ada's post. Which exception stopped the reader, and which course line is the first frame in the trace (nil if it shows none)?" do
+  koan "Read traces/06_get_post.exs.trace: Bob opens Ada's post. Which exception stopped the reader, and which course line is the first frame in the trace (nil if it shows none)? get_post! ends by calling Repo.one!, and a call in last position replaces its caller's frame." do
     assert Koans.Trace.exception("06_get_post") == _a("Ecto.NoResultsError")
     assert Koans.Trace.first_frame("06_get_post") == _a(nil)
   end
