@@ -1,0 +1,12 @@
+[project]
+name = "review-koans-python"
+version = "0.0.0"
+requires-python = ">=3.13"
+dependencies = ["pytest==9.2.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["koans"]
+python_files = ["*_test.py"]
+pythonpath = ["."]
+norecursedirs = [".*", "__pycache__", "fixtures", "review", "_variants"]
+addopts = "-x -q --no-header -rN -p no:cacheprovider --import-mode=importlib"
