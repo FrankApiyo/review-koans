@@ -22,7 +22,11 @@ TIMEOUT_SECONDS = 120
 COLOURLESS = {"NO_COLOR": "1", "FORCE_COLOR": "0", "PYTHON_COLORS": "0"}
 
 TIMESTAMP = re.compile(r"^\d\d:\d\d:\d\d\.\d{3} ", re.M)
-ABSOLUTE_PATH = re.compile(r"file://|(?<![\w./:-])/(?:[\w.@+-]+/)+")
+FILE_URL = "file://"
+# Machine paths only: a route such as /ch07/notes/1 is course output.
+FILESYSTEM_ROOTS = ("/" + "Users/", "/" + "home/", "/private/", "/var/folders/", "/tmp/")
+# LiveView's ids are 16 url-safe base64 characters; phx- attributes are lower case.
+LIVEVIEW_ID = re.compile(r"(?<![\w-])phx-(?=[\w-]{0,15}[A-Z0-9])[\w-]{16}(?![\w-])", re.ASCII)
 RUNTIME_APPS = "stdlib|kernel|elixir|mix|ex_unit|logger|compiler|iex"
 RUNTIME_FRAME = re.compile(
     rf"^\s+(\((?:{RUNTIME_APPS})(?: [^)]*)?\) |at .*\bnode:internal/)"
@@ -33,7 +37,7 @@ MASK = [
     (re.compile(r"#PID<[\d.]+>"), "#PID<_>"),
     (re.compile(r"#Reference<[\d.]+>"), "#Reference<_>"),
     (re.compile(r"#Port<[\d.]+>"), "#Port<_>"),
-    (re.compile(r"phx-[A-Za-z0-9_-]+"), "phx-_"),
+    (LIVEVIEW_ID, "phx-_"),
 ]
 
 
@@ -55,8 +59,14 @@ def mask(text: str) -> str:
     return "\n".join(lines)
 
 
+def machine_paths() -> re.Pattern[str]:
+    roots = [*FILESYSTEM_ROOTS, f"{Path.home()}/", f"{ROOT}/"]
+    alternatives = "|".join(re.escape(root) for root in roots)
+    return re.compile(rf"{re.escape(FILE_URL)}|(?<![\w./-])(?:{alternatives})", re.ASCII)
+
+
 def refusal(text: str) -> str | None:
-    if ABSOLUTE_PATH.search(text):
+    if machine_paths().search(text):
         return "absolute path"
     if "warning:" in text:
         return "warning:"

@@ -126,7 +126,7 @@ defmodule Verify.TraceTest do
     varying = """
     [error] GenServer #PID<0.512.0> terminating
     Last message: {:ping, #PID<0.94.0>}
-    Last message: %{"event" => "phx-GHk3x"}
+    Last message: %{"event" => "phx-GOjFmOiYZVJevRSD"}
     """
 
     assert with_trace(varying, &Trace.process/1) == "GenServer"
@@ -136,5 +136,20 @@ defmodule Verify.TraceTest do
         with_trace(varying, extractor)
       end
     end
+  end
+
+  test "an answer holding a LiveView topic raises" do
+    topic = ~s(Last message: %Phoenix.Socket.Message{topic: "lv:phx-GOjFtvxTWuABD-_8"}\n)
+
+    assert_raise ArgumentError, ~r/changes on every capture/, fn ->
+      with_trace(topic, &Trace.last_message/1)
+    end
+  end
+
+  test "an answer holding phx- attributes is kept" do
+    markup = ~s(<button phx-click="pick" phx-value-identifier="tea">)
+
+    assert with_trace("Last message: {:render, #{markup}}\n", &Trace.last_message/1) ==
+             "{:render, #{markup}}"
   end
 end

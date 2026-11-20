@@ -61,10 +61,32 @@ Node.js v25.9.0
 LIVE = """\
 [error] GenServer #PID<0.512.0> terminating
 ** (FunctionClauseError) no function clause matching in Board.handle_event/3
-Last message: %Phoenix.Socket.Message{topic: "lv:phx-GHk3x_9-aQ", event: "event", \
+Last message: %Phoenix.Socket.Message{topic: "lv:phx-GOjFmOiYZVJevRSD", event: "event", \
 payload: %{"event" => "mark"}, ref: "4", join_ref: "1"}
-State: %{id: "phx-GHk3x_9-aQ", monitor: #Reference<0.3104.1.20>, port: #Port<0.7>}
+State: %{id: "phx-GOjFmOiYZVJevRSD", monitor: #Reference<0.3104.1.20>, port: #Port<0.7>}
 """
+
+LIVE_MARKUP = (
+    '<div id="phx-GOjFtvxTWuABD-_8" data-phx-main>'
+    '<button phx-click="pick" phx-value-id="2" phx-value-identifier="tea">tea</button>'
+    '<form phx-submit="save" phx-change="validate"></form></div>'
+)
+
+ROUTES = (
+    "** (Phoenix.Router.NoRouteError) no route found for GET /ch07/notes/1 (Support.Router)\n"
+    '    live "/ch08/notebooks/:id/edit", Course.Ch08.NotebookLive.Edit\n'
+)
+HOME = Path("/srv/people/ada")
+FILESYSTEM_ROOTS = {
+    "file_url": "file:///opt/elsewhere/",
+    "users": "/" + "Users/ada/",
+    "home": "/" + "home/ada/",
+    "private": "/private/var/tmp/",
+    "var_folders": "/var/folders/xy/T/",
+    "tmp": "/tmp/",
+    "path_home": f"{HOME}/",
+    "repo_root": f"{ROOT}/",
+}
 
 
 def test_scrub_removes_root_paths_file_urls_and_timestamps():
@@ -118,17 +140,39 @@ def test_mask_tolerates_node_internal_frame_moves():
 def test_mask_hides_refs_ports_and_liveview_ids():
     recaptured = (
         LIVE.replace("#PID<0.512.0>", "#PID<0.640.0>")
-        .replace("phx-GHk3x_9-aQ", "phx-F0zQ-r_2Lm")
+        .replace("phx-GOjFmOiYZVJevRSD", "phx-GOjFtvxTWuABDACB")
         .replace("#Reference<0.3104.1.20>", "#Reference<0.88.4.1>")
         .replace("#Port<0.7>", "#Port<0.12>")
     )
 
     assert recaptured != LIVE
     assert mask(recaptured) == mask(LIVE)
-    for varying in ("0.512.0", "GHk3x", "0.3104.1.20", "0.7>"):
+    for varying in ("0.512.0", "GOjFmOiYZVJevRSD", "0.3104.1.20", "0.7>"):
         assert varying not in mask(LIVE)
     assert '"lv:phx-_"' in mask(LIVE)
     assert '"event" => "mark"' in mask(LIVE)
+
+
+def test_mask_hides_a_liveview_id_but_keeps_phx_attributes():
+    masked = mask(LIVE_MARKUP)
+
+    assert "GOjFtvxTWuABD-_8" not in masked
+    assert '<div id="phx-_" data-phx-main>' in masked
+    for attribute in ("phx-click", "phx-value-id", "phx-value-identifier", "phx-submit", "phx-change"):
+        assert f'{attribute}="' in masked
+
+
+def test_refusal_accepts_routes():
+    assert traces.refusal(ROUTES) is None
+
+
+@pytest.mark.parametrize("root", FILESYSTEM_ROOTS.values(), ids=FILESYSTEM_ROOTS.keys())
+def test_refusal_refuses_each_filesystem_root(root, monkeypatch):
+    monkeypatch.setenv("HOME", str(HOME))
+    monkeypatch.setattr(traces, "ROOT", ROOT)
+    frame = f"    (review_koans 0.1.0) {root}elixir/lib/support/db.ex:12: Support.Db.reset!/0\n"
+
+    assert traces.refusal(COUNTER + frame) == "absolute path"
 
 
 def test_course_line_change_is_stale():
@@ -175,7 +219,7 @@ def test_capture_refuses_absolute_paths_and_warnings(fake_runs, tmp_path, capsys
     fake_runs.update(
         {
             "01_clean.exs": COUNTER,
-            "02_path.exs": COUNTER + "    (elixir 1.19.5) /opt/elixir/lib/gen_server.ex:1: x\n",
+            "02_path.exs": COUNTER + "    (elixir 1.19.5) /tmp/elixir/lib/gen_server.ex:1: x\n",
             "03_warning.exs": "    warning: variable \"x\" is unused\n" + COUNTER,
         }
     )
