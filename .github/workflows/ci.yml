@@ -32,10 +32,13 @@ jobs:
 
   generator:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.13", "3.14"]
     steps:
       - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@v10.3.3
-      - run: uv venv --python 3.13 && uv pip install pytest==9.2.0
+      - run: uv venv --python ${{ matrix.python }} && uv pip install pytest==9.2.0
       - run: .venv/bin/pytest tests/test_chapter00.py tests/test_generate.py tests/test_lessons.py tests/test_traces.py
