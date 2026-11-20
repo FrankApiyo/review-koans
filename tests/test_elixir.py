@@ -352,8 +352,7 @@ def test_no_network_in_course_code():
 
 
 def test_endpoint_never_serves():
-    if not (TRACK_DIR / "lib" / "support" / "endpoint.ex").exists():
-        pytest.skip("the track has no endpoint yet")
+    assert (TRACK_DIR / "lib" / "support" / "endpoint.ex").is_file()
     configs = [*files_under(TRACK_DIR, ("lib", "config"), (".ex", ".exs")), TRACK_DIR / "mix.exs"]
     assert static_hits(configs, SERVES) == []
 
