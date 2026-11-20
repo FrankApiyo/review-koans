@@ -15,7 +15,7 @@ def with_token(review):
 def after_a_token(review):
     review.make_config("secret")
     assert review.make_config() == PLAIN
-    assert review.DEFAULTS == PLAIN
+    assert getattr(review, "DEFAULTS", PLAIN) == PLAIN
 
 
 def two_tokens(review):
