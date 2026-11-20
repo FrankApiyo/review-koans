@@ -7,11 +7,16 @@ defmodule Support.Db do
   alias Support.Repo
 
   @course_tables """
-  SELECT name FROM pragma_table_list
-  WHERE schema = 'main' AND type IN ('table', 'virtual')
-    AND name NOT LIKE 'sqlite_%' AND name <> 'schema_migrations'
-  ORDER BY name
+  SELECT l.name, l.type, m.sql FROM pragma_table_list AS l
+  JOIN sqlite_master AS m ON m.name = l.name
+  WHERE l.schema = 'main' AND l.type IN ('table', 'virtual')
+    AND l.name NOT LIKE 'sqlite_%' AND l.name <> 'schema_migrations'
+  ORDER BY l.name
   """
+
+  # An FTS5 table declared with content= keeps no rows of its own: DELETE FROM it is refused
+  # (contentless) or reads the content table (external content), so its index is cleared instead.
+  @fts5_content ~r/\bcontent\s*=/i
 
   @spec path() :: String.t()
   def path, do: Path.join(Mix.Project.build_path(), "review_koans.sqlite3")
@@ -29,10 +34,18 @@ defmodule Support.Db do
 
   defp delete_rows do
     Repo.query!("PRAGMA defer_foreign_keys = ON")
-    Enum.each(Repo.query!(@course_tables).rows, fn [table] -> delete_all(table) end)
+    Enum.each(Repo.query!(@course_tables).rows, &clear/1)
     if sequence?(), do: delete_all("sqlite_sequence")
     {:ok, :ok}
   end
+
+  defp clear([table, "virtual", sql]) do
+    if Regex.match?(@fts5_content, sql),
+      do: Repo.query!(~s|INSERT INTO "#{table}"("#{table}") VALUES ('delete-all')|),
+      else: delete_all(table)
+  end
+
+  defp clear([table, _type, _sql]), do: delete_all(table)
 
   defp delete_all(table), do: Repo.query!(~s(DELETE FROM "#{table}"))
 

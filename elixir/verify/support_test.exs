@@ -22,6 +22,14 @@ defmodule Verify.SupportTest do
         add :label, :string, null: false
         add :owner_id, references(:verify_owners), null: false
       end
+
+      execute "CREATE VIRTUAL TABLE verify_words USING fts5(word)", "DROP TABLE verify_words"
+
+      execute "CREATE VIRTUAL TABLE verify_owner_index USING fts5(name, content='verify_owners', content_rowid='id')",
+              "DROP TABLE verify_owner_index"
+
+      execute "CREATE VIRTUAL TABLE verify_tokens USING fts5(word, content='')",
+              "DROP TABLE verify_tokens"
     end
   end
 
@@ -107,6 +115,39 @@ defmodule Verify.SupportTest do
     assert matches("notes_fts", "alpha") == []
     assert matches("notes_fts", "beta") == [[1]]
     Repo.query!("INSERT INTO notes_fts(notes_fts) VALUES ('integrity-check')")
+  end
+
+  test "reset! empties an FTS5 table that stores its own rows" do
+    Repo.query!("INSERT INTO verify_words (rowid, word) VALUES (1, 'alpha')")
+
+    assert Db.reset!() == :ok
+
+    assert rows("SELECT count(*) FROM verify_words") == [[0]]
+    Repo.query!("INSERT INTO verify_words (rowid, word) VALUES (1, 'beta')")
+    assert matches("verify_words", "beta") == [[1]]
+  end
+
+  test "reset! empties an external-content FTS5 index that no trigger keeps in step" do
+    owner = insert_owner!("alpha")
+    Repo.query!("INSERT INTO verify_owner_index (rowid, name) VALUES (?, 'alpha')", [owner])
+
+    assert Db.reset!() == :ok
+
+    owner = insert_owner!("beta")
+    Repo.query!("INSERT INTO verify_owner_index (rowid, name) VALUES (?, 'beta')", [owner])
+
+    assert matches("verify_owner_index", "alpha") == []
+    assert matches("verify_owner_index", "beta") == [[1]]
+  end
+
+  test "reset! empties a contentless FTS5 table" do
+    Repo.query!("INSERT INTO verify_tokens (rowid, word) VALUES (1, 'alpha')")
+
+    assert Db.reset!() == :ok
+
+    assert matches("verify_tokens", "alpha") == []
+    Repo.query!("INSERT INTO verify_tokens (rowid, word) VALUES (1, 'beta')")
+    assert matches("verify_tokens", "beta") == [[1]]
   end
 
   test "a client killed mid-transaction leaves the schema and earlier rows in place" do
