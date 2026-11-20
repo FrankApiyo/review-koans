@@ -3,3 +3,8 @@
 elixir/source/review/01_price_client.ex | after | fetch/3's timeout is the caller's argument: checks pass 0 only while the server is provably blocked, and otherwise the reply always comes first
 elixir/source/review/01_thumbnails.ex | after | only a wrong half's timeout: the crash case never sends a result, so the timer always fires and the half fails either way
 elixir/source/review/02_asker.ex | after | only an alt half: after 0 takes a :DOWN that is already waiting and never waits
+python/source/review/04_with_retry.py | time.sleep(backoff * 2 ** attempt) | patched in every check
+python/source/review/04_with_retry.py | await asyncio.sleep(backoff * 2 ** attempt) | patched in every check
+python/source/review/04_with_retry.py | await asyncio.to_thread(time.sleep, backoff * 2 ** attempt) | only a wrong half: time.sleep is patched in every check and returns at once
+python/source/review/04_poll.py | await asyncio.sleep(interval) | interval is 0 in every check
+python/checks/04_with_retry_checks.py | swaps = {time.sleep: clock.blocking_sleep, asyncio.sleep: clock.sleep, asyncio.to_thread: clock.to_thread} | never calls them: swaps a review's own imported sleep for the check's stand-in

@@ -1,4 +1,7 @@
 https://docs.python.org/3.13/faq/programming.html
+https://docs.python.org/3.13/library/asyncio-dev.html
+https://docs.python.org/3.13/library/asyncio-eventloop.html
+https://docs.python.org/3.13/library/asyncio-task.html
 https://docs.python.org/3.13/library/copy.html
 https://docs.python.org/3.13/library/dataclasses.html
 https://docs.python.org/3.13/library/exceptions.html
