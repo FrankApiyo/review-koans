@@ -22,10 +22,10 @@ defmodule Koans.Ch05.EtsTest do
   `:ordered_set` walks its keys in term order. `select_delete` deletes only the rows for which
   the match spec returns `true`.
 
-  A common mistake: keeping a `lookup` as the guard in front of a plain `insert`. Two callers
-  both pass it before either writes, and the second overwrites the first. Use `insert_new` or
-  `update_counter` with a default row, or send every write through the owner. Create a shared
-  table in the `init` of a supervised process, not on first use.
+  A common mistake: keeping a `lookup` or `member` check in front of the write. Two callers
+  both pass it before either writes. Let the write decide alone: `insert_new` and its result,
+  `update_counter` with a default row, or one call in which the owner checks and writes.
+  Create a shared table in the `init` of a supervised process, never on first use.
 
   Read more: https://www.erlang.org/doc/apps/stdlib/ets.html,
   https://www.erlang.org/doc/apps/erts/match_spec.html
@@ -124,7 +124,7 @@ defmodule Koans.Ch05.EtsTest do
   end
 
   koan "Read koans/review/05_rate_limit.ex. Write :fine, or the line number of the bug." do
-    verdict("05_rate_limit.ex", _a(23))
+    verdict("05_rate_limit.ex", _a(22))
   end
 
   koan "Fix the bug in koans/review/05_rate_limit.ex in place. The hidden checks name what still fails." do

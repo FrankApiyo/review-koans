@@ -1,8 +1,8 @@
 defmodule Review.Ch05.Expiry do
   @moduledoc """
   Sweeps a cache table of `{key, value, expires_at}` rows, with times in whole seconds.
-  `expire/2` deletes every row that has expired by `now`, a row that expires exactly at `now`
-  included, and returns how many rows it deleted.
+  `expire/2` deletes every row whose `expires_at` is at or before `now`, and returns how many
+  rows it deleted.
   """
 
   @spec expire(:ets.table(), integer()) :: non_neg_integer()

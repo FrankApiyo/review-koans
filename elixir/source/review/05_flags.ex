@@ -43,6 +43,16 @@ defmodule Review.Ch05.Flags do
   def init(:ok), do: {:ok, :ets.new(:flags, [:named_table, :protected, read_concurrency: true])}
 
   defp table, do: :flags
+  # === wrong: partial — the server takes the table in init, but adopts one a reader made while it was down
+  @impl true
+  def init(:ok), do: {:ok, table()}
+
+  defp table do
+    case :ets.whereis(:flags) do
+      :undefined -> :ets.new(:flags, [:named_table, :public, read_concurrency: true])
+      _table -> :flags
+    end
+  end
   # === wrong: refuses — a new table on every call, so nothing set is ever read back
   @impl true
   def init(:ok), do: {:ok, nil}

@@ -8,7 +8,7 @@ defmodule Review.Ch05.RateLimit do
   use GenServer
 
   @spec start_link(term()) :: GenServer.on_start()
-  def start_link(_arg), do: GenServer.start_link(__MODULE__, :ok)
+  def start_link(_arg), do: GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
 
   @spec table(GenServer.server()) :: :ets.table()
   def table(limiter), do: GenServer.call(limiter, :table)
@@ -19,9 +19,7 @@ defmodule Review.Ch05.RateLimit do
   @spec hit(:ets.table(), term()) :: pos_integer()
   def hit(table, key), do: :ets.update_counter(table, key, 1, {key, 0})
 
-  @impl true
   def init(:ok), do: {:ok, :ets.new(:hits, [:set, :public, write_concurrency: true])}
 
-  @impl true
   def handle_call(:table, _from, table), do: {:reply, table, table}
 end

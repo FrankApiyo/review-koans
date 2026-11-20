@@ -1,8 +1,8 @@
 defmodule Review.Ch05.Expiry do
   @moduledoc """
   Sweeps a cache table of `{key, value, expires_at}` rows, with times in whole seconds.
-  `expire/2` deletes every row that has expired by `now`, a row that expires exactly at `now`
-  included, and returns how many rows it deleted.
+  `expire/2` deletes every row whose `expires_at` is at or before `now`, and returns how many
+  rows it deleted.
   """
 
   @spec expire(:ets.table(), integer()) :: non_neg_integer()
@@ -22,6 +22,10 @@ defmodule Review.Ch05.Expiry do
     :ets.select_delete(table, [{{:_, :_, :"$1"}, [{:"=<", :"$1", now}], [:"$_"]}])
     # === wrong: partial — Elixir's <=, which match specs do not know
     :ets.select_delete(table, [{{:_, :_, :"$1"}, [{:<=, :"$1", now}], [true]}])
+    # === wrong: partial — selects the expired keys, then deletes each by key in a separate call
+    expired = :ets.select(table, [{{:"$1", :_, :"$2"}, [{:"=<", :"$2", now}], [:"$1"]}])
+    Enum.each(expired, &:ets.delete(table, &1))
+    length(expired)
     # <<<
   end
 end

@@ -3,6 +3,10 @@ defmodule Checks.Ch05.EtsCalls do
   Records which `:ets` functions a function calls in the calling process, so a check can tell
   one atomic table call from a read followed by a separate write without racing anything.
 
+  Some `:ets` functions call others in the module (`tab2list/1` calls `match_object/2`,
+  `select_delete/2` an internal function), so the list depends on how OTP implements `:ets`.
+  Checks therefore ask only about the write functions they name, through `write_after_read?/2`.
+
   The tracer is a separate process, so no trace message lands in the caller's mailbox. Tracing
   runs in a trace session of its own, so it never meets another tracer's flags, and OTP
   destroys a session once its handle is garbage collected, so a caller killed mid-call leaves
@@ -23,13 +27,10 @@ defmodule Checks.Ch05.EtsCalls do
     returned(outcome, calls)
   end
 
-  @doc "True when a plain `insert` follows another table call, so the write acts on an earlier read."
-  @spec write_after_read?([{atom(), arity()}]) :: boolean()
-  def write_after_read?([_first | later]), do: Enum.any?(later, &plain_insert?/1)
-  def write_after_read?([]), do: false
-
-  defp plain_insert?({:insert, _arity}), do: true
-  defp plain_insert?(_call), do: false
+  @doc "True when one of `writes` follows another table call, so that write acts on an earlier read."
+  @spec write_after_read?([{atom(), arity()}], [{atom(), arity()}]) :: boolean()
+  def write_after_read?([_first | later], writes), do: Enum.any?(later, &(&1 in writes))
+  def write_after_read?([], _writes), do: false
 
   defp run(fun) do
     {:returned, fun.()}

@@ -8,7 +8,7 @@ defmodule Review.Ch05.RateLimit do
   use GenServer
 
   @spec start_link(term()) :: GenServer.on_start()
-  def start_link(_arg), do: GenServer.start_link(__MODULE__, :ok)
+  def start_link(_arg), do: GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
 
   @spec table(GenServer.server()) :: :ets.table()
   def table(limiter), do: GenServer.call(limiter, :table)
@@ -16,63 +16,36 @@ defmodule Review.Ch05.RateLimit do
   @spec count(:ets.table(), term()) :: non_neg_integer()
   def count(table, key), do: :ets.lookup_element(table, key, 2, 0)
 
+  @spec hit(:ets.table(), term()) :: pos_integer()
   # >>> fix
-  @spec hit(:ets.table(), term()) :: pos_integer()
   def hit(table, key), do: :ets.update_counter(table, key, 1, {key, 0})
 
-  @impl true
   def init(:ok), do: {:ok, :ets.new(:hits, [:set, read_concurrency: true])}
-
-  @impl true
-  def handle_call(:table, _from, table), do: {:reply, table, table}
   # === fixed
-  @spec hit(:ets.table(), term()) :: pos_integer()
   def hit(table, key), do: :ets.update_counter(table, key, 1, {key, 0})
 
-  @impl true
   def init(:ok), do: {:ok, :ets.new(:hits, [:set, :public, write_concurrency: true])}
-
-  @impl true
-  def handle_call(:table, _from, table), do: {:reply, table, table}
   # === alt: :public added, read_concurrency kept
-  @spec hit(:ets.table(), term()) :: pos_integer()
   def hit(table, key), do: :ets.update_counter(table, key, 1, {key, 0})
 
-  @impl true
   def init(:ok), do: {:ok, :ets.new(:hits, [:set, :public, read_concurrency: true])}
+  # === alt: the owner does the check and the write together, in one call
+  def hit(_table, key), do: GenServer.call(__MODULE__, {:hit, key})
 
-  @impl true
-  def handle_call(:table, _from, table), do: {:reply, table, table}
-  # === alt: writes routed through the server that owns the table
-  @spec hit(:ets.table(), term()) :: pos_integer()
-  def hit(table, key), do: GenServer.call(:ets.info(table, :owner), {:hit, key})
-
-  @impl true
   def init(:ok), do: {:ok, :ets.new(:hits, [:set, read_concurrency: true])}
-
-  @impl true
-  def handle_call(:table, _from, table), do: {:reply, table, table}
 
   def handle_call({:hit, key}, _from, table),
     do: {:reply, :ets.update_counter(table, key, 1, {key, 0}), table}
   # === wrong: refuses — a :private table, which no other process can read or write
-  @spec hit(:ets.table(), term()) :: pos_integer()
   def hit(table, key), do: :ets.update_counter(table, key, 1, {key, 0})
 
-  @impl true
   def init(:ok), do: {:ok, :ets.new(:hits, [:set, :private])}
-
-  @impl true
-  def handle_call(:table, _from, table), do: {:reply, table, table}
   # === wrong: partial — write_concurrency added, but the table is still :protected
-  @spec hit(:ets.table(), term()) :: pos_integer()
   def hit(table, key), do: :ets.update_counter(table, key, 1, {key, 0})
 
-  @impl true
   def init(:ok),
     do: {:ok, :ets.new(:hits, [:set, read_concurrency: true, write_concurrency: true])}
-
-  @impl true
-  def handle_call(:table, _from, table), do: {:reply, table, table}
   # <<<
+
+  def handle_call(:table, _from, table), do: {:reply, table, table}
 end

@@ -15,12 +15,6 @@ defmodule Review.Ch05.Jobs do
     :ok
     # === fixed
     if :ets.insert_new(table, {job, worker}), do: :ok, else: {:error, :taken}
-    # === alt: a cheap check first, while insert_new still makes the decision
-    cond do
-      :ets.member(table, job) -> {:error, :taken}
-      :ets.insert_new(table, {job, worker}) -> :ok
-      true -> {:error, :taken}
-    end
     # === wrong: refuses — reports every job as taken
     _ = {table, job, worker}
     {:error, :taken}
@@ -39,6 +33,15 @@ defmodule Review.Ch05.Jobs do
     else
       :ets.insert(table, {job, worker})
       :ok
+    end
+    # === wrong: partial — looks the job up, then calls insert_new but ignores a false result
+    case :ets.lookup(table, job) do
+      [] ->
+        :ets.insert_new(table, {job, worker})
+        :ok
+
+      [_claimed] ->
+        {:error, :taken}
     end
     # <<<
   end

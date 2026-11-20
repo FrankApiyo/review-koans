@@ -12,7 +12,7 @@ defmodule Checks.Ch05.Jobs do
        fn -> assert {:ok, {:ok, :ok, :a, :b}} = Hidden.isolated(&first_claims/0) end},
       {:exploit, "a second worker claims a job that is already claimed",
        fn -> assert {:ok, {{:error, :taken}, :a}} = Hidden.isolated(&second_claim/0) end},
-      {:exploit, "a claim reads the table, then writes it in a separate call",
+      {:exploit, "a claim reads the table before the call that claims the job",
        fn -> assert {:ok, {:ok, :one_decision}} = Hidden.isolated(&traced_claim/0) end}
     ]
   end
@@ -30,8 +30,9 @@ defmodule Checks.Ch05.Jobs do
     {Jobs.claim(table, 1, :b), Jobs.owner(table, 1)}
   end
 
-  # Another worker can run between two table calls, so a claim must not write on the strength
-  # of an earlier read. The calls are counted, not raced: every run gives the same answer.
+  # Another worker can run between two table calls, so a claim must not rest on an earlier
+  # read: the call that writes decides alone. The calls are counted, not raced, so every run
+  # gives the same answer.
   defp traced_claim do
     table = Jobs.new()
     {result, calls} = EtsCalls.during(fn -> Jobs.claim(table, 3, :c) end)
@@ -39,6 +40,8 @@ defmodule Checks.Ch05.Jobs do
   end
 
   defp decision(calls) do
-    if EtsCalls.write_after_read?(calls), do: :read_then_write, else: :one_decision
+    if EtsCalls.write_after_read?(calls, insert: 2, insert_new: 2),
+      do: :read_then_write,
+      else: :one_decision
   end
 end

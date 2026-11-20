@@ -29,7 +29,9 @@ defmodule Checks.Ch05.Hits do
   defp traced_hit do
     table = Hits.new()
     {count, calls} = EtsCalls.during(fn -> Hits.hit(table, "/") end)
-    {count, if(EtsCalls.write_after_read?(calls), do: :read_then_write, else: :one_update)}
+
+    {count,
+     if(EtsCalls.write_after_read?(calls, insert: 2), do: :read_then_write, else: :one_update)}
   end
 
   # Every hit is one atomic table call, so the total is the same whatever the interleaving.
