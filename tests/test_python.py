@@ -1,7 +1,6 @@
 """The eleven self-tests for the Python track. REVIEW_KOANS_CHAPTER=NN narrows them to one chapter."""
 
 import ast
-import hashlib
 import io
 import re
 import subprocess
@@ -20,8 +19,11 @@ from dialects import PYTHON
 from elixir_runner import KoansResult
 from generate import blanks, render_review_with, render_test_variant
 from harness import (
+    PERSONAL,
     ROOT,
+    ReviewVariant,
     case_id,
+    earlier_are_ok,
     chapter_filter,
     enclosing_koan,
     files_under,
@@ -29,22 +31,31 @@ from harness import (
     has_fix,
     in_scope,
     koan_body,
+    kinds_through,
     koan_lines,
     meditation,
+    meditations,
+    personal_path_hits,
     rendered_verdicts,
     review_renders,
+    review_variants,
     static_hits,
+    tracked_files,
+    tree_files,
     tree_test_files,
     verdict_calls,
+    verdict_problems,
 )
 from python_runner import PYTHON_DIR as TRACK_DIR
-from python_runner import PytestRun, koans_result, run_pytest, stage_each
+from python_runner import PytestRun, koans_result, run_pytest, run_staged
 
 TRACK = "python"
 TREES = ("koans", "solutions")
 SOURCE = TRACK_DIR / "source"
 ALLOWLIST = ROOT / "tests" / "allowlist.txt"
 COURSE_FILES = files_under(TRACK_DIR, ("source", "checks", "traces"), (".py",))
+CLOCK_FREE_FILES = [*COURSE_FILES, *files_under(TRACK_DIR, ("review_koans", "verify"), (".py",))]
+PERSONAL_SCOPE = ("python/", "tools/", "tests/")
 NETWORK = re.compile(
     r"\b(import|from)\s+(socket|ssl|urllib|http|requests|httpx|aiohttp)\b|open_connection|create_connection"
     r"|urlopen|subprocess\.(run|Popen|call|check_call|check_output)\("
@@ -53,7 +64,6 @@ REAL_CLOCK = re.compile(
     r"\btime\.(time|sleep|monotonic|perf_counter|process_time)\b|\b(datetime|date)\.(now|utcnow|today)\("
     r"|\.now\(|asyncio\.sleep\((?!0\))|\bwait_for\(|asyncio\.timeout\b|call_later|call_at|\.time\(\)"
 )
-PERSONAL = ("/" + "Users/", "/" + "home/")
 VERDICT_ENDING = "Write FINE, or the line number of the bug."
 FIX_MEDITATION = "Fix the bug in koans/review/{file} in place. The hidden checks name what still fails."
 BLANK = re.compile(r"(?<!\w)__(?!\w)")
@@ -95,14 +105,6 @@ def verdict_for(file: str):
 def whole_tree(tree: str) -> PytestRun:
     paths = [f"{tree}/{path.name}" for path in tree_test_files(TRACK, tree)] if chapter_filter() else [tree]
     return run_pytest(paths, verify=True)
-
-
-def kinds_through(run: PytestRun, path: str, text: str, koan: int) -> dict[int, str | None]:
-    return {line: run.results.get((path, line)) for line in lines_of(text) if line <= koan}
-
-
-def earlier_are_ok(kinds: dict[int, str | None], koan: int) -> bool:
-    return all(kind == "ok" for line, kind in kinds.items() if line < koan)
 
 
 def first_blank_line(text: str) -> int:
@@ -181,8 +183,7 @@ BLANK_VARIANTS = blank_variants()
 @pytest.fixture(scope="module")
 def batch_run() -> PytestRun:
     reviews = tree_reviews("solutions")
-    folder = stage_each("batch", {v.key: ({v.name: v.text}, reviews) for v in BLANK_VARIANTS})
-    return run_pytest([folder], verify=True)
+    return run_staged("batch", {v.key: ({v.name: v.text}, reviews) for v in BLANK_VARIANTS})
 
 
 @pytest.mark.parametrize("variant", BLANK_VARIANTS, ids=lambda v: v.id)
@@ -191,7 +192,7 @@ def test_each_blank_fails_alone(variant, batch_run):
     koans_part = "\n".join(lines[lines_of(variant.text)[0] - 1 :])
     assert len(BLANK.findall(koans_part)) == 1 and BLANK.search(lines[variant.line - 1]), "one blank, on its line"
     koan = enclosing_koan(variant.text, variant.line, PYTHON)
-    kinds = kinds_through(batch_run, variant.staged, variant.text, koan)
+    kinds = kinds_through(batch_run, variant.staged, variant.text, koan, PYTHON)
     assert kinds[koan] == "Blank", batch_run.output[-3000:]
     assert earlier_are_ok(kinds, koan), kinds
 
@@ -205,34 +206,10 @@ def test_first_blank_fails_on_its_own_line(koans_run):
     assert koans_result(koans_run) == KoansResult("Blank", f"koans/{first.name}", line), koans_run.output[-3000:]
 
 
-@dataclass(frozen=True)
-class ReviewVariant:
-    id: str
-    file: str
-    block: int
-    half: int | None
-    tag: str | None
-
-
-def review_variants(select) -> list[ReviewVariant]:
-    found = []
-    for file, review in REVIEWS.items():
-        if not in_scope(file):
-            continue
-        for k, block in enumerate(review.blocks):
-            if block.kind == "fix" and select(block.kind, None):
-                found.append(ReviewVariant(case_id(file, f"b{k}"), file, k, None, None))
-            for j, half in enumerate(block.halves):
-                if select(block.kind, half):
-                    mark = "a" if half.kind == "alt" else "w"
-                    found.append(ReviewVariant(case_id(file, f"b{k}", f"{mark}{j}"), file, k, j, half.tag))
-    return found
-
-
-FIX_BLOCKS = review_variants(lambda kind, half: kind == "fix" and half is None)
-WRONG_HALVES = review_variants(lambda kind, half: kind == "fix" and half is not None and half.kind == "wrong")
-ALT_HALVES = review_variants(lambda kind, half: half is not None and half.kind == "alt")
-GUARD_MUTANTS = review_variants(lambda kind, half: kind == "guard" and half is not None and half.kind == "wrong")
+FIX_BLOCKS = review_variants(REVIEWS, lambda kind, half: kind == "fix" and half is None)
+WRONG_HALVES = review_variants(REVIEWS, lambda kind, half: kind == "fix" and half is not None and half.kind == "wrong")
+ALT_HALVES = review_variants(REVIEWS, lambda kind, half: half is not None and half.kind == "alt")
+GUARD_MUTANTS = review_variants(REVIEWS, lambda kind, half: kind == "guard" and half is not None and half.kind == "wrong")
 ALL_REVIEW_VARIANTS = [*FIX_BLOCKS, *WRONG_HALVES, *ALT_HALVES, *GUARD_MUTANTS]
 REVIEW_KEYS = {case.id: f"v{number:04d}" for number, case in enumerate(ALL_REVIEW_VARIANTS, 1)}
 
@@ -254,7 +231,7 @@ def review_run() -> PytestRun:
     for case in ALL_REVIEW_VARIANTS:
         name = staged_test_name(case)
         staged[REVIEW_KEYS[case.id]] = ({name: tree_text("solutions", name)}, {**reviews, case.file: review_text(case)})
-    return run_pytest([stage_each("review", staged)], verify=True)
+    return run_staged("review", staged)
 
 
 def review_kinds(case: ReviewVariant, run: PytestRun) -> tuple[dict[int, str | None], int]:
@@ -268,7 +245,7 @@ def review_kinds(case: ReviewVariant, run: PytestRun) -> tuple[dict[int, str | N
         koan = enclosing_koan(text, answered.line, PYTHON)
     else:
         koan = fix_koan_line(text, answered.line, PYTHON)
-    return kinds_through(run, f"_variants/review/{REVIEW_KEYS[case.id]}/{name}", text, koan), koan
+    return kinds_through(run, f"_variants/review/{REVIEW_KEYS[case.id]}/{name}", text, koan, PYTHON), koan
 
 
 @pytest.mark.parametrize("case", FIX_BLOCKS, ids=lambda c: c.id)
@@ -305,25 +282,11 @@ def test_each_guard_mutant_fails_as_hidden_case(case, review_run):
 # 5. Verdicts are consistent.
 
 
-def digest(file: str, answer: int | str) -> str:
-    return hashlib.sha256(f"{file}:{answer}".encode("utf-8")).hexdigest()[:10]
-
-
 @pytest.mark.parametrize("call", VERDICTS, ids=lambda c: case_id(c.file))
 def test_verdicts_are_consistent(call):
-    review = REVIEWS[call.file]
-    [rendered] = [v for v in rendered_verdicts(tree_text("koans", Path(call.test_path).name)) if v.line == call.line]
-    accepted = {digest(call.file, line) for line in review.accepted} or {digest(call.file, "fine")}
+    koans_test = tree_text("koans", Path(call.test_path).name)
     koans_review = tree_text("koans", f"review/{call.file}")
-    assert (call.answer == "fine") == (not has_fix(review))
-    assert rendered.answer == PYTHON.value_blank
-    assert rendered.digests == ",".join(sorted(accepted))
-    assert rendered.source_digest == hashlib.sha256(koans_review.encode("utf-8")).hexdigest()[:10]
-    if has_fix(review):
-        assert call.answer in review.accepted
-        assert digest(call.file, "fine") not in accepted
-    lines = range(0, len(review.koans.splitlines()) + 6)
-    assert [n for n in lines if n not in review.accepted and digest(call.file, n) in accepted] == []
+    assert verdict_problems(call, REVIEWS[call.file], koans_test, koans_review, PYTHON) == []
 
 
 def test_fine_share_is_between_15_and_25_percent():
@@ -390,8 +353,11 @@ def _exits_finally(node: ast.AST, in_loop: bool = False) -> list[int]:
         return []
     if isinstance(node, ast.Return) or (isinstance(node, (ast.Break, ast.Continue)) and not in_loop):
         return [node.lineno]
-    loop = in_loop or isinstance(node, (ast.For, ast.AsyncFor, ast.While))
-    return [line for child in ast.iter_child_nodes(node) for line in _exits_finally(child, loop)]
+    if isinstance(node, (ast.For, ast.AsyncFor, ast.While)):
+        inside = [line for child in node.body for line in _exits_finally(child, True)]
+        after = [line for child in node.orelse for line in _exits_finally(child, in_loop)]
+        return inside + after
+    return [line for child in ast.iter_child_nodes(node) for line in _exits_finally(child, in_loop)]
 
 
 def finally_exits(text: str) -> list[int]:
@@ -412,6 +378,11 @@ def test_finally_exits_are_found():
     loops = "for x in y:\n    try:\n        pass\n    finally:\n        for z in x:\n            break\n        continue\n"
     nested = "try:\n    pass\nfinally:\n    def g():\n        return 2\n"
     assert (finally_exits(leaves), finally_exits(loops), finally_exits(nested)) == ([5], [7], [])
+
+
+def test_a_break_in_a_loops_else_leaves_finally():
+    loop_else = "for x in y:\n    try:\n        pass\n    finally:\n        for z in x:\n            pass\n        else:\n            break\n"
+    assert finally_exits(loop_else) == [8]
 
 
 def finally_sources() -> dict[str, str]:
@@ -441,29 +412,16 @@ def test_offline_guard_is_active():
 
 
 def test_no_real_clock_in_course_code():
-    assert static_hits(COURSE_FILES, REAL_CLOCK, ALLOWLIST) == []
+    assert static_hits(CLOCK_FREE_FILES, REAL_CLOCK, ALLOWLIST) == []
 
 
 # 11. Hygiene.
 
 
-def tree_files(tree: str) -> list[str]:
-    base = TRACK_DIR / tree
-    return sorted(
-        p.relative_to(base).as_posix()
-        for p in base.rglob("*")
-        if p.is_file() and not any(part.startswith((".", "__pycache__")) for part in p.relative_to(base).parts)
-    )
-
-
-def meditations(text: str) -> list[str | None]:
-    return [meditation(text, line, PYTHON) for line in lines_of(text)]
-
-
 def test_trees_mirror_each_other(koans_run, solutions_run):
-    assert tree_files("koans") == tree_files("solutions")
+    assert tree_files(TRACK_DIR / "koans") == tree_files(TRACK_DIR / "solutions")
     for path in tree_test_files(TRACK, "koans"):
-        assert meditations(path.read_text(encoding="utf-8")) == meditations(tree_text("solutions", path.name))
+        assert meditations(path.read_text(encoding="utf-8"), PYTHON) == meditations(tree_text("solutions", path.name), PYTHON)
 
     def per_file(run: PytestRun) -> Counter[str]:
         return Counter(Path(path).name for path, _line in run.results)
@@ -478,10 +436,16 @@ def test_every_koan_has_a_meditation(tree):
         text = path.read_text(encoding="utf-8")
         missing.extend(
             f"{tree}/{path.name}:{line}"
-            for line, said in zip(lines_of(text), meditations(text))
+            for line, said in zip(lines_of(text), meditations(text, PYTHON))
             if not (said or "").strip()
         )
     assert missing == []
+
+
+def test_no_personal_paths_in_tracked_files():
+    scoped = [path for path in tracked_files() if shown(path).startswith(PERSONAL_SCOPE)]
+    assert scoped
+    assert personal_path_hits(scoped) == []
 
 
 def test_native_runtime_suite_passes():

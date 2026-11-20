@@ -1,5 +1,6 @@
 """Runs pytest on the Python track in a subprocess, reads its KOANS-TEST lines, and stages variants under _variants/."""
 
+import fcntl
 import os
 import re
 import shutil
@@ -76,12 +77,6 @@ def _write_tree(target: Path, tests: Mapping[str, str], reviews: Mapping[str, st
         (target / "review" / _plain_name(file)).write_text(text, encoding="utf-8")
 
 
-def stage(name: str, tests: Mapping[str, str], reviews: Mapping[str, str]) -> str:
-    """Recreates _variants/<name>/ with the test files and a review/ folder; checks/ is found above it."""
-    _write_tree(_fresh(name), tests, reviews)
-    return f"_variants/{name}"
-
-
 def stage_each(name: str, variants: Mapping[str, tuple[Mapping[str, str], Mapping[str, str]]]) -> str:
     """Recreates _variants/<name>/ with one vNNNN/ folder per variant, each holding its tests and review/."""
     target = _fresh(name)
@@ -90,3 +85,14 @@ def stage_each(name: str, variants: Mapping[str, tuple[Mapping[str, str], Mappin
             raise ValueError(f"variant folders are named v0001 and up, not {key!r}")
         _write_tree(target / key, tests, reviews)
     return f"_variants/{name}"
+
+
+def run_staged(name: str, variants: Mapping[str, tuple[Mapping[str, str], Mapping[str, str]]]) -> PytestRun:
+    """Stages the variants and runs them in verify mode, holding _variants/.lock so concurrent runs take turns."""
+    VARIANTS.mkdir(exist_ok=True)
+    with (VARIANTS / ".lock").open("w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            return run_pytest([stage_each(name, variants)], verify=True)
+        finally:
+            fcntl.flock(lock, fcntl.LOCK_UN)

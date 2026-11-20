@@ -1,12 +1,13 @@
 """Track-neutral helpers for the self-tests: scope, review renders, verdicts and static scans."""
 
+import hashlib
 import os
 import re
 import subprocess
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Protocol
 
 import generate
 from dialects import ELIXIR, Dialect, dialect_for
@@ -197,3 +198,93 @@ def tracked_files() -> list[Path]:
         ["git", "ls-files", "-z"], cwd=ROOT, capture_output=True, text=True, check=True
     ).stdout
     return [ROOT / name for name in listed.split("\0") if name and (ROOT / name).is_file()]
+
+
+PERSONAL = ("/" + "Users/", "/" + "home/")
+
+
+class HasResults(Protocol):
+    results: dict[tuple[str, int], str]
+
+
+@dataclass(frozen=True)
+class ReviewVariant:
+    id: str
+    file: str
+    block: int
+    half: int | None
+    tag: str | None
+
+
+def kinds_through(
+    run: HasResults, path: str, text: str, koan: int, dialect: Dialect = ELIXIR
+) -> dict[int, str | None]:
+    """Each koan's kind in a verify run, from the file's first koan through `koan`."""
+    return {line: run.results.get((path, line)) for line in koan_lines(text, dialect) if line <= koan}
+
+
+def earlier_are_ok(kinds: dict[int, str | None], koan: int) -> bool:
+    return all(kind == "ok" for line, kind in kinds.items() if line < koan)
+
+
+def review_variants(
+    reviews: dict[str, generate.Review], select: Callable[[str, generate.Half | None], bool]
+) -> list[ReviewVariant]:
+    """In-scope fix blocks (half None) and halves that `select` keeps, with ids chNN-<file>-bK[-aJ|-wJ]."""
+    found = []
+    for file, review in reviews.items():
+        if not in_scope(file):
+            continue
+        for k, block in enumerate(review.blocks):
+            if block.kind == "fix" and select(block.kind, None):
+                found.append(ReviewVariant(case_id(file, f"b{k}"), file, k, None, None))
+            for j, half in enumerate(block.halves):
+                if select(block.kind, half):
+                    mark = "a" if half.kind == "alt" else "w"
+                    found.append(ReviewVariant(case_id(file, f"b{k}", f"{mark}{j}"), file, k, j, half.tag))
+    return found
+
+
+def verdict_digest(file: str, answer: int | str) -> str:
+    return hashlib.sha256(f"{file}:{answer}".encode("utf-8")).hexdigest()[:10]
+
+
+def verdict_problems(
+    call: VerdictCall, review: generate.Review, koans_test: str, koans_review: str, dialect: Dialect
+) -> list[str]:
+    """What is wrong with one rendered verdict: its blank, digests, source digest or accepted lines."""
+    [rendered] = [v for v in rendered_verdicts(koans_test) if v.line == call.line]
+    accepted = {verdict_digest(call.file, line) for line in review.accepted} or {verdict_digest(call.file, "fine")}
+    problems = []
+    if (call.answer == "fine") != (not has_fix(review)):
+        problems.append("the answer is fine exactly when the review has no fix block")
+    if rendered.answer != dialect.value_blank:
+        problems.append(f"the koans verdict holds {rendered.answer!r}, not the blank")
+    if rendered.digests != ",".join(sorted(accepted)):
+        problems.append("the digests are not the sorted digests of the accepted answers")
+    if rendered.source_digest != hashlib.sha256(koans_review.encode("utf-8")).hexdigest()[:10]:
+        problems.append("the source digest is not the koans review's")
+    if has_fix(review) and (call.answer not in review.accepted or verdict_digest(call.file, "fine") in accepted):
+        problems.append("a bug review accepts its answer and never fine")
+    lines = range(0, len(review.koans.splitlines()) + 6)
+    stray = [n for n in lines if n not in review.accepted and verdict_digest(call.file, n) in accepted]
+    if stray:
+        problems.append(f"lines {stray} hash into the accepted set")
+    return problems
+
+
+def tree_files(base: Path) -> list[str]:
+    """Every file under `base`, relative, skipping dot folders and __pycache__."""
+    return sorted(
+        p.relative_to(base).as_posix()
+        for p in base.rglob("*")
+        if p.is_file() and not any(part.startswith((".", "__pycache__")) for part in p.relative_to(base).parts)
+    )
+
+
+def meditations(text: str, dialect: Dialect = ELIXIR) -> list[str | None]:
+    return [meditation(text, line, dialect) for line in koan_lines(text, dialect)]
+
+
+def personal_path_hits(paths: Iterable[Path]) -> list[str]:
+    return [path.relative_to(ROOT).as_posix() for path in paths if any(n.encode() in path.read_bytes() for n in PERSONAL)]
