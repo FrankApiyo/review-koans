@@ -35,7 +35,7 @@ def reason(review):
 
 
 def names_the_order(review):
-    assert raised_by(review, review.GatewayError("card declined")).args == ("o-1",)
+    assert "o-1" in str(raised_by(review, review.GatewayError("card declined")))
 
 
 CASES = [

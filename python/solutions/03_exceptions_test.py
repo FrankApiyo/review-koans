@@ -4,10 +4,11 @@ inside a handler; a broad handler above a narrower one; `continue` or `pass` as 
 handler; a handler that raises again; a name bound by `except ... as` and read after the block.
 
 Why it bites: the program keeps going with the wrong answer. A port of `80a` becomes 8080, and
-a failed push drops out of the report. The language tries `except` clauses top to bottom, so a
-handler below `except Exception` never runs. `from None` hides the context in the traceback; it
-does not delete it, but `__cause__` stays `None`, so a caller that reads the cause gets nothing.
-The language also deletes the `as` name when its handler ends, even a name bound before `try`.
+a failed push drops out of the report. The language tries `except` clauses top to bottom, so
+for an Exception subclass a handler below `except Exception` never runs. `from None` hides the
+context in the traceback without deleting it, and `__cause__` stays `None`, so a caller that
+reads the cause gets nothing. The language also deletes the `as` name when its handler ends,
+even a name bound before `try`.
 
 Review habit: Read for what is missing. For each handler, ask which exceptions it catches that
 its author did not mean, and what record of the failure is left once it has run: a status, an
@@ -16,10 +17,12 @@ Which `OSError` deleting a directory gives is the platform's: macOS and Linux di
 
 A common mistake: narrowing in one place only. `except (KeyError, ValueError)` still turns a
 bad port into 8080; moving only `ValueError` up still sends `NotFound` to 500; `append` then
-`break` reports the first failure only; dropping `from None` sets the context but not the
-cause. A chained traceback prints two errors. In the `03_parse_order` trace, the first is the
-request's fault (a missing value at column 22) and the last is the code's (line 8). In the
-`03_last_error` trace, line 8 fails, but the handler on line 6 deleted the name it reads.
+`break` reports the first failure only; dropping `from None` shows the context again, but
+`__cause__` is still `None`. Checking that a file exists before unlinking it races: another
+process can delete it in between, so the unlink still meets a missing file. A chained
+traceback prints two errors. In the `03_parse_order` trace, the first is the request's fault
+(a missing value at column 22) and the last is the code's. In the `03_last_error` trace, the
+handler on line 6 deleted the name the `return` reads.
 
 Read more: https://docs.python.org/3.13/tutorial/errors.html,
 https://docs.python.org/3.13/library/exceptions.html,

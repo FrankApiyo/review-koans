@@ -29,6 +29,9 @@ def charge(gateway, order: dict) -> str:
         failure = ChargeError(order["id"])
         failure.__cause__ = error
         raise failure
+    # === alt: the gateway's error as a second argument
+    except GatewayError as error:
+        raise ChargeError(order["id"], error) from error
     # === wrong: refuses — fails every charge
     finally:
         raise ChargeError(order["id"])
