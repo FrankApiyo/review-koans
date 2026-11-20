@@ -26,16 +26,16 @@ cd review-koans
 
 ### Setup
 
-You need Elixir 1.19 and OTP 28.
+You need Elixir 1.19 and OTP 28, and `mix` on your path. See the [Elixir install page](https://elixir-lang.org/install.html). No version manager is required.
 
 ```sh
 cd elixir
 mix deps.get
 ```
 
-This downloads the dependencies once, about 5 to 7 MB. Two of them ship precompiled native code. You need a C compiler and `make` only on a machine where no precompiled build matches.
+`mix deps.get` fetches the source packages. The first `mix test` compiles them and downloads the precompiled native libraries for two of them (`exqlite` and `lazy_html`) from GitHub, so it needs a network and takes a minute or two. You need a C compiler and `make` only on a machine where no precompiled library matches.
 
-Everything after that runs offline.
+Every run after the first compile is offline.
 
 ### The loop
 
@@ -132,7 +132,7 @@ If you edit or reformat a review file before you answer its verdict, its line nu
 
 `elixir/source/` is the one authored copy. The generator writes `elixir/koans/` and `elixir/solutions/` from it. The solutions build in their own folder, `elixir/_build_solutions`, so compiling them never disturbs the learner's build.
 
-Set up the harness from the repo root:
+You need Python 3.13 or later and [uv](https://docs.astral.sh/uv/getting-started/installation/). Set up the harness from the repo root:
 
 ```sh
 uv venv
@@ -150,7 +150,7 @@ python tools/lessons.py                   # rebuild lessons/index.html
 pytest tests/                             # the self-tests
 ```
 
-The generator and trace tools use the Python standard library only, and need Python 3.13 or later. Run `source .venv/bin/activate` first, or call `.venv/bin/pytest`.
+The generator and trace tools use the Python standard library only. Run `source .venv/bin/activate` first, or call `.venv/bin/pytest`.
 
 `REVIEW_KOANS_CHAPTER=NN pytest tests/test_elixir.py` runs the Elixir self-tests for one chapter.
 

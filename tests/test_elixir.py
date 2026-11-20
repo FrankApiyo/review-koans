@@ -496,3 +496,14 @@ def test_learner_commands_are_frozen():
     code_blocks = "\n".join(re.findall(r"```[^\n]*\n(.*?)```", readme, re.S))
     for command in ("cd elixir", "mix deps.get", "mix test"):
         assert command in code_blocks, command
+
+
+def test_readme_counts_match_the_koans():
+    koan_files = sorted((TRACK_DIR / "koans").glob("[0-9][0-9]_*_test.exs"))
+    koans = sum(len(re.findall(r'^  koan "', f.read_text(encoding="utf-8"), re.M)) for f in koan_files)
+    readme = (TRACK_DIR.parent / "README.md").read_text(encoding="utf-8")
+    assert f"has {koans} koans in {len(koan_files)} chapters" in readme
+    assert set(re.findall(r"(\d+) of (\d+) koans", readme)) and {
+        total for _, total in re.findall(r"(\d+) of (\d+) koans", readme)
+    } == {str(koans)}
+    assert f"All {koans} koans pass" in readme
