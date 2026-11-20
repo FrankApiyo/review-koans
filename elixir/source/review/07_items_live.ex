@@ -47,6 +47,17 @@ defmodule Review.Ch07.ItemsLive do
     else
       _not_found -> {:noreply, put_flash(socket, :error, "Not found")}
     end
+    # === alt: String.to_integer, which stops the view on an id that is not a number
+    uid = socket.assigns.uid
+
+    case Store.get(String.to_integer(id)) do
+      %{user_id: ^uid} = item ->
+        :ok = Store.delete(item.id)
+        {:noreply, assign(socket, items: Store.for_user(uid))}
+
+      _not_found ->
+        {:noreply, put_flash(socket, :error, "Not found")}
+    end
     # === wrong: refuses — deletes nothing
     _ = id
     {:noreply, put_flash(socket, :error, "Not found")}

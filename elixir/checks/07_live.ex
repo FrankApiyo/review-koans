@@ -59,6 +59,19 @@ defmodule Checks.Ch07.Live do
     {view, html}
   end
 
+  @doc """
+  Runs `action` in a process of its own: what it returns, or `:stopped` when it exits because
+  the view it drives has stopped. A view may stop on a forged or malformed value.
+  """
+  @spec attempt((-> term())) :: term() | :stopped | :timeout
+  def attempt(action) do
+    case Koans.Hidden.isolated(action) do
+      {:ok, result} -> result
+      {:down, _reason} -> :stopped
+      :timeout -> :timeout
+    end
+  end
+
   @doc "The text of each list row, in page order."
   @spec titles(String.t()) :: [String.t()]
   def titles(html), do: html |> LazyHTML.from_fragment() |> LazyHTML.query("li") |> texts()

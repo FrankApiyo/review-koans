@@ -12,14 +12,16 @@ defmodule Koans.Ch07.LiveViewTest do
   Review habit: Ask who supplied the value. Params, `phx-value-*` values and the URL come from
   the client; a `phx-value-*` attribute is text, so it arrives as a string. LiveView documents
   that `mount/3` runs twice, for the plain HTTP render and again once the socket connects
-  (`connected?/1` tells them apart), and that a routed view's `handle_params/3` runs after
-  `mount` and on every patch. `push_patch` keeps the process, `push_navigate` mounts a new one,
+  (`connected?/1` tells them apart), that a routed view's `handle_params/3` runs after `mount`
+  and on every patch, and that `push_patch` keeps the process, `push_navigate` mounts a new one
   and `redirect` reloads the page. So authorise in the handler against the session's user, and
-  answer "not yours" as you answer "not there"; parse ids with `Integer.parse`; map column names
-  through an allow-list; read URL state in `handle_params`; broadcast private data on a per-user
-  topic, since a subscriber receives every message on its topic. A LiveView with no
-  `handle_info/2` logs a stray message at debug level and carries on: that is LiveView's choice,
-  and a `handle_info` with no catch-all clause crashes on the same message.
+  answer "not yours" as you answer "not there"; map column names through an allow-list; read
+  URL state in `handle_params`; broadcast private data on a per-user topic, since PubSub
+  delivers every message on a topic to each subscriber. A forged or malformed value may stop
+  the forger's own view, so this course accepts `String.to_integer`, `String.to_existing_atom`
+  and guards with no fallback clause; it asks that no other user's data is shown or changed and
+  no atom is made. A LiveView with no `handle_info/2` logs a stray message at debug level and
+  carries on: that is LiveView's choice. A `handle_info` with no catch-all crashes on it.
 
   A common mistake: dropping other users' items in `handle_info`. The checks pass, but each
   private item still reaches every subscriber's process.
@@ -60,7 +62,7 @@ defmodule Koans.Ch07.LiveViewTest do
     html = view |> element("button", "coffee") |> render_click()
     params = receive do: ({:params, params} -> params)
 
-    assert params == _a(%{"id" => "2"})
+    assert params["id"] == _a("2")
     assert texts(html, ["#picked"]) == _a(["none"])
   end
 

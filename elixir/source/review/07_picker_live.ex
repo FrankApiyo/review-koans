@@ -33,13 +33,13 @@ defmodule Review.Ch07.PickerLive do
     picked = Enum.find(socket.assigns.items, &(Integer.to_string(&1.id) == id))
     {:noreply, assign(socket, picked: picked)}
   end
-  # === wrong: refuses — rejects every pick by raising, which stops the view
-  def handle_event("pick", _params, _socket), do: raise(ArgumentError, "picking is off")
-  # === wrong: partial — String.to_integer raises on an id that is not a number, which stops the view
+  # === alt: String.to_integer, which stops the view on an id that is not a number
   def handle_event("pick", %{"id" => id}, socket) do
     id = String.to_integer(id)
     {:noreply, assign(socket, picked: Enum.find(socket.assigns.items, &(&1.id == id)))}
   end
+  # === wrong: refuses — rejects every pick by raising, which stops the view
+  def handle_event("pick", _params, _socket), do: raise(ArgumentError, "picking is off")
   # === wrong: partial — looks the id up in the store, so it picks another user's item
   def handle_event("pick", %{"id" => id}, socket) do
     picked =

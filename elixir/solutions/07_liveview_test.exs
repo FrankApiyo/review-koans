@@ -12,14 +12,16 @@ defmodule Koans.Ch07.LiveViewTest do
   Review habit: Ask who supplied the value. Params, `phx-value-*` values and the URL come from
   the client; a `phx-value-*` attribute is text, so it arrives as a string. LiveView documents
   that `mount/3` runs twice, for the plain HTTP render and again once the socket connects
-  (`connected?/1` tells them apart), and that a routed view's `handle_params/3` runs after
-  `mount` and on every patch. `push_patch` keeps the process, `push_navigate` mounts a new one,
+  (`connected?/1` tells them apart), that a routed view's `handle_params/3` runs after `mount`
+  and on every patch, and that `push_patch` keeps the process, `push_navigate` mounts a new one
   and `redirect` reloads the page. So authorise in the handler against the session's user, and
-  answer "not yours" as you answer "not there"; parse ids with `Integer.parse`; map column names
-  through an allow-list; read URL state in `handle_params`; broadcast private data on a per-user
-  topic, since a subscriber receives every message on its topic. A LiveView with no
-  `handle_info/2` logs a stray message at debug level and carries on: that is LiveView's choice,
-  and a `handle_info` with no catch-all clause crashes on the same message.
+  answer "not yours" as you answer "not there"; map column names through an allow-list; read
+  URL state in `handle_params`; broadcast private data on a per-user topic, since PubSub
+  delivers every message on a topic to each subscriber. A forged or malformed value may stop
+  the forger's own view, so this course accepts `String.to_integer`, `String.to_existing_atom`
+  and guards with no fallback clause; it asks that no other user's data is shown or changed and
+  no atom is made. A LiveView with no `handle_info/2` logs a stray message at debug level and
+  carries on: that is LiveView's choice. A `handle_info` with no catch-all crashes on it.
 
   A common mistake: dropping other users' items in `handle_info`. The checks pass, but each
   private item still reaches every subscriber's process.
@@ -60,7 +62,7 @@ defmodule Koans.Ch07.LiveViewTest do
     html = view |> element("button", "coffee") |> render_click()
     params = receive do: ({:params, params} -> params)
 
-    assert params == %{"id" => "2"}
+    assert params["id"] == "2"
     assert texts(html, ["#picked"]) == ["none"]
   end
 
@@ -87,7 +89,7 @@ defmodule Koans.Ch07.LiveViewTest do
   end
 
   koan "Read koans/review/07_feed_live.ex. Write :fine, or the line number of the bug." do
-    verdict("07_feed_live.ex", 14, "217f1f32f1,98dcfb95c7", "8e3f3d0c27")
+    verdict("07_feed_live.ex", 14, "217f1f32f1,98dcfb95c7", "1a48910e74")
   end
 
   koan "Fix the bug in koans/review/07_feed_live.ex in place. The hidden checks name what still fails." do
@@ -95,7 +97,7 @@ defmodule Koans.Ch07.LiveViewTest do
   end
 
   koan "Read koans/review/07_sort_live.ex. Write :fine, or the line number of the bug." do
-    verdict("07_sort_live.ex", 18, "7d1a1da39a", "c4e97126c1")
+    verdict("07_sort_live.ex", 18, "7d1a1da39a,e1045ad552", "c4e97126c1")
   end
 
   koan "Fix the bug in koans/review/07_sort_live.ex in place. The hidden checks name what still fails." do
@@ -108,7 +110,7 @@ defmodule Koans.Ch07.LiveViewTest do
   end
 
   koan "Read koans/review/07_notes_live.ex. Write :fine, or the line number of the bug." do
-    verdict("07_notes_live.ex", 16, "0b4bdbf955,6a2ad4281d,8d59907ba2,ba01115ab3,e5ab8e67de,eb7a42b82c,f41b4be2b4", "ab4af127cf")
+    verdict("07_notes_live.ex", 16, "0b4bdbf955,61ad943e25,6a2ad4281d,8d59907ba2,ba01115ab3,e5ab8e67de,eb7a42b82c,f41b4be2b4", "e580515d6f")
   end
 
   koan "Fix the bug in koans/review/07_notes_live.ex in place. The hidden checks name what still fails." do

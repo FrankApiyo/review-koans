@@ -9,8 +9,10 @@ defmodule Checks.Ch07.PickerLive do
   @impl true
   def cases do
     [
-      {:twin, "a pick that names none of the user's items shows none, and the view keeps running",
-       fn -> assert {:ok, {"none", "none"}} = as_ada(&no_such_item/1) end},
+      {:twin, "clicking an item's pick button keeps the user's items listed",
+       fn -> assert {:ok, ["item-1", "item-3", "item-4"]} = as_ada(&rows_after_click/1) end},
+      {:twin, "a pick that names another user's item shows none of theirs",
+       fn -> assert {:ok, :not_shown} = as_ada(&pick_bobs_item/1) end},
       {:exploit, "clicking an item's pick button shows its title",
        fn -> assert {:ok, "apple"} = as_ada(&click_apple/1) end}
     ]
@@ -22,11 +24,19 @@ defmodule Checks.Ch07.PickerLive do
     end)
   end
 
-  defp no_such_item(view) do
-    not_yours = render_click(view, "pick", %{"id" => "2"})
-    not_a_number = render_click(view, "pick", %{"id" => "abc"})
-    {Live.text(not_yours, "#picked"), Live.text(not_a_number, "#picked")}
+  defp rows_after_click(view) do
+    view |> element("#item-3 button") |> render_click() |> Live.rows()
   end
+
+  defp pick_bobs_item(view) do
+    case Live.attempt(fn -> render_click(view, "pick", %{"id" => "2"}) end) do
+      html when is_binary(html) -> shown(Live.text(html, "#picked"))
+      stopped -> shown(stopped)
+    end
+  end
+
+  defp shown("Bob's plan"), do: :shown
+  defp shown(_none_or_stopped), do: :not_shown
 
   defp click_apple(view) do
     view |> element("#item-3 button") |> render_click() |> Live.text("#picked")

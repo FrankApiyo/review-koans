@@ -12,7 +12,7 @@ defmodule Checks.Ch07.SortLive do
       {:twin, "sorting by title puts apple first",
        fn -> assert {:ok, ["apple", "bread", "tea"]} = as_ada(&by_title/1) end},
       {:exploit, "a client asks to sort by a column name it made up",
-       fn -> assert {:ok, {:no_atom, ["apple", "bread", "tea"]}} = as_ada(&made_up_column/1) end}
+       fn -> assert {:ok, :no_atom} = as_ada(&made_up_column/1) end}
     ]
   end
 
@@ -22,11 +22,12 @@ defmodule Checks.Ch07.SortLive do
 
   defp by_title(view), do: view |> element("button", "title") |> render_click() |> Live.titles()
 
-  # A name unique to this run, so no earlier run or batched koan can have made it an atom.
+  # A name unique to this run, so no earlier run or batched koan can have made it an atom. The
+  # view may stop on it; the case asks only whether the atom was made.
   defp made_up_column(view) do
     column = "sort_by_#{System.unique_integer([:positive])}"
-    _html = render_click(view, "sort", %{"by" => column})
-    {atom_made(column), view |> render() |> Live.titles() |> Enum.sort()}
+    _page = Live.attempt(fn -> render_click(view, "sort", %{"by" => column}) end)
+    atom_made(column)
   end
 
   defp atom_made(name) do

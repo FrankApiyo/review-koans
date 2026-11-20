@@ -14,30 +14,42 @@ defmodule Review.Ch07.SortLive do
   end
 
   @impl true
+  # >>> fix
   def handle_event("sort", %{"by" => by}, socket) do
-    # >>> fix
     key = String.to_atom(by)
-    # === fixed
+  # === fixed
+  def handle_event("sort", %{"by" => by}, socket) do
     key = Map.get(%{"title" => :title, "id" => :id}, by, :title)
-    # === alt: a case on the two column names
+  # === alt: a case on the two column names
+  def handle_event("sort", %{"by" => by}, socket) do
     key =
       case by do
         "id" -> :id
         _title -> :title
       end
-    # === alt: String.to_existing_atom, with :title for a name no code has used
+  # === alt: a guard with no fallback clause, which stops the view on any other name
+  def handle_event("sort", %{"by" => by}, socket) when by in ["title", "id"] do
+    key = String.to_existing_atom(by)
+  # === alt: String.to_existing_atom, which stops the view on a name no code has used
+  def handle_event("sort", %{"by" => by}, socket) do
+    key = String.to_existing_atom(by)
+  # === alt: String.to_existing_atom, with :title for a name no code has used
+  def handle_event("sort", %{"by" => by}, socket) do
     key =
       try do
         String.to_existing_atom(by)
       rescue
         ArgumentError -> :title
       end
-    # === wrong: refuses — ignores the column and keeps id order
+  # === wrong: refuses — ignores the column and keeps id order
+  def handle_event("sort", %{"by" => by}, socket) do
     _ = by
     key = :id
-    # === wrong: partial — String.to_existing_atom raises on a name no code has used, which stops the view
-    key = String.to_existing_atom(by)
-    # <<<
+  # === wrong: partial — checks the column after String.to_atom has already made the atom
+  def handle_event("sort", %{"by" => by}, socket) do
+    key = String.to_atom(by)
+    key = if key in [:title, :id], do: key, else: :title
+  # <<<
     {:noreply, assign(socket, items: Enum.sort_by(socket.assigns.items, &Map.get(&1, key)))}
   end
 

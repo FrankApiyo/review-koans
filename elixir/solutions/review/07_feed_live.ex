@@ -1,7 +1,7 @@
 defmodule Review.Ch07.FeedLive do
   @moduledoc """
   A live feed of the signed-in user's items. `publish/1` announces a new item, and every feed
-  its owner has open shows it at once. A user's items are private to that user.
+  its owner has open shows it at once.
   """
 
   use Phoenix.LiveView

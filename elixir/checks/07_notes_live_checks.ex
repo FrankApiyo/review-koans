@@ -10,6 +10,8 @@ defmodule Checks.Ch07.NotesLive do
     [
       {:twin, "a bookmarked tag URL lists only that tag's notes",
        fn -> assert {:ok, ["apple", "bread"]} = at("/ch07/notes?tag=food", &first_render/1) end},
+      {:twin, "the notes page without a tag lists every note",
+       fn -> assert {:ok, ["tea", "apple", "bread"]} = at("/ch07/notes", &first_render/1) end},
       {:exploit, "choosing a tag refilters the list in the same LiveView",
        fn -> assert {:ok, ["tea"]} = at("/ch07/notes?tag=food", &choose_drink/1) end},
       {:exploit, "a patch to another tag's URL, as the back button sends, refilters the list",
@@ -23,9 +25,10 @@ defmodule Checks.Ch07.NotesLive do
 
   defp first_render({_view, html}), do: Live.titles(html)
 
-  # A navigation instead of a patch returns {:error, {:live_redirect, _}}, not a page.
+  # The tag control may be a button or a patch link. A navigation instead of a patch returns
+  # {:error, {:live_redirect, _}}, not a page.
   defp choose_drink({view, _html}) do
-    case view |> element("button", "drink") |> render_click() do
+    case view |> element("button, a", "drink") |> render_click() do
       html when is_binary(html) -> Live.titles(html)
       navigated -> navigated
     end

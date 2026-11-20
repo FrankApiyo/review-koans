@@ -129,6 +129,15 @@ defmodule Verify.SupportTest do
     end
   end
 
+  test "the static render of a routed view reads the query string" do
+    start_supervised!({Course.Ch07.Store, []})
+
+    html = Support.Live.conn(3) |> get("/ch07/dashboard?tag=desk") |> html_response(200)
+
+    assert html =~ ~s(<p id="mode">static</p>)
+    assert html =~ ~s(<p id="tag">desk</p>)
+  end
+
   test "the endpoint is not serving" do
     assert Support.Endpoint.config(:server) == false
   end

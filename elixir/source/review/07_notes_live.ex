@@ -19,6 +19,8 @@ defmodule Review.Ch07.NotesLive do
   def handle_event("tag", %{"tag" => tag}, socket) do
     {:noreply, push_patch(socket, to: "/ch07/notes?" <> URI.encode_query(tag: tag))}
   end
+
+  defp tag_choice(assigns), do: ~H|<button phx-click="tag" phx-value-tag={@tag}>{@tag}</button>|
   # === fixed
   def mount(_params, %{"uid" => uid}, socket), do: {:ok, assign(socket, uid: uid)}
 
@@ -29,6 +31,8 @@ defmodule Review.Ch07.NotesLive do
   def handle_event("tag", %{"tag" => tag}, socket) do
     {:noreply, push_patch(socket, to: "/ch07/notes?" <> URI.encode_query(tag: tag))}
   end
+
+  defp tag_choice(assigns), do: ~H|<button phx-click="tag" phx-value-tag={@tag}>{@tag}</button>|
   # === alt: reads the tag in mount and again in handle_params
   def mount(params, %{"uid" => uid}, socket) do
     {:ok, assign(socket, uid: uid, items: tagged(uid, params["tag"]))}
@@ -41,6 +45,18 @@ defmodule Review.Ch07.NotesLive do
   def handle_event("tag", %{"tag" => tag}, socket) do
     {:noreply, push_patch(socket, to: "/ch07/notes?" <> URI.encode_query(tag: tag))}
   end
+
+  defp tag_choice(assigns), do: ~H|<button phx-click="tag" phx-value-tag={@tag}>{@tag}</button>|
+  # === alt: patch links instead of buttons, read in handle_params
+  def mount(_params, %{"uid" => uid}, socket), do: {:ok, assign(socket, uid: uid)}
+
+  def handle_params(params, _uri, socket) do
+    {:noreply, assign(socket, items: tagged(socket.assigns.uid, params["tag"]))}
+  end
+
+  defp tag_choice(assigns) do
+    ~H|<.link patch={"/ch07/notes?" <> URI.encode_query(tag: @tag)}>{@tag}</.link>|
+  end
   # === wrong: refuses — ignores the tag and lists every note
   def mount(_params, %{"uid" => uid}, socket) do
     {:ok, assign(socket, uid: uid, items: tagged(uid, nil))}
@@ -49,6 +65,8 @@ defmodule Review.Ch07.NotesLive do
   def handle_params(_params, _uri, socket), do: {:noreply, socket}
 
   def handle_event("tag", _params, socket), do: {:noreply, socket}
+
+  defp tag_choice(assigns), do: ~H|<button phx-click="tag" phx-value-tag={@tag}>{@tag}</button>|
   # === wrong: partial — push_navigate mounts a new LiveView for every tag
   def mount(params, %{"uid" => uid}, socket) do
     {:ok, assign(socket, uid: uid, items: tagged(uid, params["tag"]))}
@@ -59,6 +77,8 @@ defmodule Review.Ch07.NotesLive do
   def handle_event("tag", %{"tag" => tag}, socket) do
     {:noreply, push_navigate(socket, to: "/ch07/notes?" <> URI.encode_query(tag: tag))}
   end
+
+  defp tag_choice(assigns), do: ~H|<button phx-click="tag" phx-value-tag={@tag}>{@tag}</button>|
   # === wrong: partial — filters in the click handler, so a patch from the back button leaves the list stale
   def mount(params, %{"uid" => uid}, socket) do
     {:ok, assign(socket, uid: uid, items: tagged(uid, params["tag"]))}
@@ -70,6 +90,20 @@ defmodule Review.Ch07.NotesLive do
     socket = assign(socket, items: tagged(socket.assigns.uid, tag))
     {:noreply, push_patch(socket, to: "/ch07/notes?" <> URI.encode_query(tag: tag))}
   end
+
+  defp tag_choice(assigns), do: ~H|<button phx-click="tag" phx-value-tag={@tag}>{@tag}</button>|
+  # === wrong: partial — matches the tag in the handle_params head, so the page without a tag has no clause
+  def mount(_params, %{"uid" => uid}, socket), do: {:ok, assign(socket, uid: uid)}
+
+  def handle_params(%{"tag" => tag}, _uri, socket) do
+    {:noreply, assign(socket, items: tagged(socket.assigns.uid, tag))}
+  end
+
+  def handle_event("tag", %{"tag" => tag}, socket) do
+    {:noreply, push_patch(socket, to: "/ch07/notes?" <> URI.encode_query(tag: tag))}
+  end
+
+  defp tag_choice(assigns), do: ~H|<button phx-click="tag" phx-value-tag={@tag}>{@tag}</button>|
   # <<<
 
   defp tagged(uid, nil), do: Store.for_user(uid)
@@ -77,7 +111,7 @@ defmodule Review.Ch07.NotesLive do
 
   def render(assigns) do
     ~H"""
-    <button :for={tag <- ["food", "drink"]} phx-click="tag" phx-value-tag={tag}>{tag}</button>
+    <.tag_choice :for={tag <- ["food", "drink"]} tag={tag} />
     <ul>
       <li :for={item <- @items} id={"item-#{item.id}"}>{item.title}</li>
     </ul>

@@ -19,12 +19,14 @@ defmodule Review.Ch07.NotesLive do
     {:noreply, push_patch(socket, to: "/ch07/notes?" <> URI.encode_query(tag: tag))}
   end
 
+  defp tag_choice(assigns), do: ~H|<button phx-click="tag" phx-value-tag={@tag}>{@tag}</button>|
+
   defp tagged(uid, nil), do: Store.for_user(uid)
   defp tagged(uid, tag), do: Enum.filter(Store.for_user(uid), &(&1.tag == tag))
 
   def render(assigns) do
     ~H"""
-    <button :for={tag <- ["food", "drink"]} phx-click="tag" phx-value-tag={tag}>{tag}</button>
+    <.tag_choice :for={tag <- ["food", "drink"]} tag={tag} />
     <ul>
       <li :for={item <- @items} id={"item-#{item.id}"}>{item.title}</li>
     </ul>

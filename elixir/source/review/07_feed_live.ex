@@ -1,7 +1,7 @@
 defmodule Review.Ch07.FeedLive do
   @moduledoc """
   A live feed of the signed-in user's items. `publish/1` announces a new item, and every feed
-  its owner has open shows it at once. A user's items are private to that user.
+  its owner has open shows it at once.
   """
 
   use Phoenix.LiveView
@@ -18,7 +18,7 @@ defmodule Review.Ch07.FeedLive do
     # === wrong: refuses — announces nothing
     _ = item
     :ok
-    # === wrong: partial — local_broadcast stays on this node, but every feed on it still gets the item
+    # === wrong: partial — local_broadcast on the shared topic, which the per-user subscription never hears
     PubSub.local_broadcast(Support.PubSub, "items", {:created, item})
     # <<<
   end
@@ -31,7 +31,7 @@ defmodule Review.Ch07.FeedLive do
     if connected?(socket), do: PubSub.subscribe(Support.PubSub, "user:#{uid}:items")
     # === wrong: refuses — subscribes to nothing
     _ = connected?(socket)
-    # === wrong: partial — subscribes during the disconnected render, whose process ends once the page is sent
+    # === wrong: partial — subscribes only the process that renders the static page, never the LiveView
     unless connected?(socket), do: PubSub.subscribe(Support.PubSub, "user:#{uid}:items")
     # <<<
     {:ok, assign(socket, items: Store.for_user(uid))}
