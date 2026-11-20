@@ -1,0 +1,41 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  elixir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: erlef/setup-beam@v1.24.1
+        with:
+          otp-version: "28.4.2"
+          elixir-version: "1.19.5"
+      - uses: actions/cache@v6.1.0
+        with:
+          path: |
+            elixir/deps
+            elixir/_build*
+          key: mix-${{ runner.os }}-${{ hashFiles('elixir/mix.lock') }}
+      - uses: astral-sh/setup-uv@v10.3.3
+      - run: uv venv --python 3.13 && uv pip install pytest==9.2.0
+      - run: cd elixir && mix deps.get && MIX_ENV=test mix compile --warnings-as-errors
+      - run: .venv/bin/pytest tests/test_elixir.py
+
+  generator:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v10.3.3
+      - run: uv venv --python 3.13 && uv pip install pytest==9.2.0
+      - run: .venv/bin/pytest tests/test_generate.py tests/test_traces.py tests/test_lessons.py
