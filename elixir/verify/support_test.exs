@@ -62,9 +62,23 @@ defmodule Verify.SupportTest do
 
   defp rows(sql), do: Repo.query!(sql).rows
 
+  defp seed_note!(title) do
+    at = "2026-01-01T09:00:00Z"
+    user = insert!("users (email) VALUES (?)", ["ada@example.com"])
+    notebook_sql = "notebooks (name, user_id, inserted_at, updated_at) VALUES (?, ?, ?, ?)"
+    notebook = insert!(notebook_sql, ["work", user, at, at])
+
+    note_sql =
+      "notes (title, notebook_id, user_id, inserted_at, updated_at) VALUES (?, ?, ?, ?, ?)"
+
+    insert!(note_sql, [title, notebook, user, at, at])
+  end
+
+  defp matches(table, word), do: rows("SELECT rowid FROM #{table} WHERE #{table} MATCH '#{word}'")
+
   test "repo starts and migrations run in a fresh build path" do
     assert Path.dirname(Db.path()) == Mix.Project.build_path()
-    assert rows("SELECT version FROM schema_migrations ORDER BY version") == [[1], [6]]
+    assert rows("SELECT version FROM schema_migrations ORDER BY version") == [[1], [6], [8]]
     assert rows("SELECT count(*) FROM verify_owners") == [[0]]
     assert Support.Migrations.run!() == :ok
   end
@@ -81,6 +95,18 @@ defmodule Verify.SupportTest do
     assert rows("SELECT count(*) FROM verify_pens") == [[0]]
     assert insert_owner!("cy") == 1
     assert insert_pen!(1, "nib") == 1
+  end
+
+  test "reset! empties the notes search index, and search works on new notes" do
+    seed_note!("alpha")
+    assert matches("notes_fts", "alpha") == [[1]]
+
+    assert Db.reset!() == :ok
+
+    seed_note!("beta")
+    assert matches("notes_fts", "alpha") == []
+    assert matches("notes_fts", "beta") == [[1]]
+    Repo.query!("INSERT INTO notes_fts(notes_fts) VALUES ('integrity-check')")
   end
 
   test "a client killed mid-transaction leaves the schema and earlier rows in place" do

@@ -1,6 +1,8 @@
+https://hexdocs.pm/ecto/3.14.3/Ecto.Changeset.html
 https://hexdocs.pm/ecto/3.14.3/Ecto.Multi.html
 https://hexdocs.pm/ecto/3.14.3/Ecto.Query.html
 https://hexdocs.pm/ecto/3.14.3/Ecto.Repo.html
+https://hexdocs.pm/ecto_sqlite3/0.26.0/Ecto.Adapters.SQLite3.html
 https://hexdocs.pm/elixir/1.19.5/GenServer.html
 https://hexdocs.pm/elixir/1.19.5/Process.html
 https://hexdocs.pm/elixir/1.19.5/Supervisor.html
