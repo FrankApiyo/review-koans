@@ -38,4 +38,4 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@v10.3.3
       - run: uv venv --python 3.13 && uv pip install pytest==9.2.0
-      - run: .venv/bin/pytest tests/test_generate.py tests/test_traces.py tests/test_lessons.py
+      - run: .venv/bin/pytest tests/test_chapter00.py tests/test_generate.py tests/test_lessons.py tests/test_traces.py
