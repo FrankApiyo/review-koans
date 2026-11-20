@@ -102,6 +102,17 @@ defmodule Verify.TraceTest do
     assert with_trace(start_error, &Trace.init_failure/1) == {"Shop.Cache", 8}
   end
 
+  test "init_failure reads an init frame that wraps across lines" do
+    wrapped = """
+    [
+      {Shop.Cache, :init, 1,
+       [file: ~c"traces/inline.exs", line: 12]}
+    ]
+    """
+
+    assert with_trace(wrapped, &Trace.init_failure/1) == {"Shop.Cache", 12}
+  end
+
   test "init_failure skips runtime init frames and is nil without a course one" do
     runtime_only = """
     {Supervisor.Default, :init, 1, [file: ~c"lib/supervisor/default.ex", line: 7]},

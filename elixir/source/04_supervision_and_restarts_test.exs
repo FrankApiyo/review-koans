@@ -2,20 +2,20 @@ defmodule Koans.Ch04.SupervisionAndRestartsTest do
   @moduledoc ~S"""
   Look for: a child listed before a sibling its `init` calls; a sibling's pid kept from
   `init` under a strategy that restarts the sibling alone; the default `:permanent` on work
-  that runs once; a call in `init` that can fail; and code that expects a restarted process
-  to keep its state.
+  that runs once; an `init` that crashes when a call in it fails; and code that expects a
+  restarted process to keep its state.
 
-  Why it bites: the app will not boot while the database is down, so even its health check
-  is gone. After a producer restarts, every event goes to a dead pid. A warm-up job that ends
-  is restarted until its supervisor gives up, and that exit is a crash for the one above.
+  Why it bites: while the database is down the app will not boot, health check included.
+  After a producer restarts, every event goes to a dead pid. A finished warm-up job is
+  restarted until its supervisor gives up, which the one above restarts if `:permanent`.
 
   Review habit: Read for what is missing: a `restart:` option, an `{:error, _}` branch, a
   sibling that has to start first. In a trace, start from the first app frame. OTP documents
-  these rules. A supervisor starts its children in list order, waiting for each start to
-  return before the next, and stops them in reverse. A restarted child starts again from
-  `init`. `:permanent` restarts on any exit, `:transient` only on a reason other than
-  `:normal`, `:shutdown` or `{:shutdown, _}`, and `:temporary` never. When a child is to be
-  restarted, `:one_for_one` restarts only it, `:rest_for_one` also the children after it, and
+  these rules. A supervisor starts its children in list order, one start returning before the
+  next begins, and stops them in reverse. A restarted child starts again from `init`.
+  `:permanent` restarts on any exit, `:transient` only on a reason other than `:normal`,
+  `:shutdown` or `{:shutdown, _}`, and `:temporary` never. When a child is to be restarted,
+  `:one_for_one` restarts only it, `:rest_for_one` also the children after it, and
   `:one_for_all` every child. After more than `max_restarts` restarts in `max_seconds`, the
   supervisor stops its children and exits with `:shutdown`; Elixir's `Supervisor` defaults to
   3 in 5 seconds, Erlang's `supervisor` to 1 in 5. A crash in `init` fails the child's start,
@@ -24,8 +24,8 @@ defmodule Koans.Ch04.SupervisionAndRestartsTest do
   A common mistake: `:one_for_all` so a consumer gets the restarted producer's pid; a
   consumer crash then restarts the producer too, and its state is lost. Put the producer
   first under `:rest_for_one`, or have the consumer look the producer up by name on each
-  call. Raising `max_restarts` only lets a job that never stops run more times, and catching
-  the exit in a cache's `init` boots it empty.
+  call. Raising `max_restarts` only lets a job that is restarted after every stop run more
+  times, and catching the exit in a cache's `init` boots it empty.
 
   Read more: https://hexdocs.pm/elixir/1.19.5/Supervisor.html,
   https://www.erlang.org/doc/apps/stdlib/supervisor.html,
@@ -88,7 +88,7 @@ defmodule Koans.Ch04.SupervisionAndRestartsTest do
     run_checks(Checks.Ch04.Tree, Review.Ch04.Tree)
   end
 
-  koan "Read koans/review/04_pipeline.ex; Producer and Consumer in lib/course/04_pipeline_workers.ex are correct as written. Write :fine, or the line number of the bug." do
+  koan "Read koans/review/04_pipeline.ex; Producer and Consumer in lib/course/04_pipeline_workers.ex work as their docs describe. Write :fine, or the line number of the bug." do
     verdict("04_pipeline.ex", _a(16))
   end
 

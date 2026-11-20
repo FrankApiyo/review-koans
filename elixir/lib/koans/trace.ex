@@ -15,7 +15,7 @@ defmodule Koans.Trace do
   @last_message ~r/^Last message(?: \(from [^)]*\))?: (.*)$/m
   @stop_reason ~r/^\*\* \(stop\) (.*)$/m
   @event ~r/"event" => "([^"]*)"/
-  @init_frame ~r/\{([A-Z]\w*(?:\.[A-Z]\w*)*), :init, 1, \[file: ~c"traces\/[^"]*", line: (\d+)\]\}/
+  @init_frame ~r/\{\s*([A-Z]\w*(?:\.[A-Z]\w*)*),\s+:init,\s+1,\s+\[\s*file:\s+~c"traces\/[^"]*",\s+line:\s+(\d+)\s*\]\s*\}/
   @varying ~r/#PID<|#Reference<|#Port<|phx-/
 
   @spec read!(String.t()) :: String.t()
