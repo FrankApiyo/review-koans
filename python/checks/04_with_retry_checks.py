@@ -12,14 +12,6 @@ class Clock:
     def blocking_sleep(self, seconds):
         self.blocking.append(seconds)
 
-    async def sleep(self, delay, result=None):
-        await asyncio.sleep(0)
-        self.log.append(delay)
-        return result
-
-    async def to_thread(self, func, /, *args, **kwargs):
-        return func(*args, **kwargs)
-
 
 class Proxy:
     def __init__(self, module, **replaced):
@@ -47,12 +39,22 @@ class Flaky:
 
 def patch(review):
     clock = Clock()
-    review.time = Proxy(time, sleep=clock.blocking_sleep)
-    review.asyncio = Proxy(asyncio, sleep=clock.sleep, to_thread=clock.to_thread)
-    swaps = {time.sleep: clock.blocking_sleep, asyncio.sleep: clock.sleep, asyncio.to_thread: clock.to_thread}
-    for name in ("sleep", "to_thread"):
-        if getattr(review, name, None) in swaps:
-            setattr(review, name, swaps[getattr(review, name)])
+    loop = asyncio.get_running_loop()
+
+    def call_later(delay, callback, *args, context=None):
+        clock.log.append(delay)
+        return loop.call_soon(callback, *args, context=context)
+
+    async def run_in_executor(_executor, func, *args):
+        return func(*args)
+
+    loop.call_later, loop.run_in_executor = call_later, run_in_executor
+    blocking_time = Proxy(time, sleep=clock.blocking_sleep)
+    for name, value in list(vars(review).items()):
+        if value is time:
+            setattr(review, name, blocking_time)
+        elif value is time.sleep:
+            setattr(review, name, clock.blocking_sleep)
     return clock
 
 

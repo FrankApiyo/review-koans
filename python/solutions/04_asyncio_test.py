@@ -18,7 +18,8 @@ started if this line raises or the task is cancelled: does it stop, keep running
 
 A common mistake: starting a task and not awaiting it, so the function returns before the work
 runs; `return_exceptions=True`, which still waits for the slow job; `break` or `return` on cancel,
-which ends the task normally, so whoever cancelled it thinks it finished; moving the blocking call
+which ends the task normally, and `TaskGroup` and the `timeout()` context manager are built on
+cancellation, so asyncio's docs say they misbehave when a task swallows it; moving the blocking call
 into a worker thread, which frees the loop but ties up a thread; `as_completed`, which yields in
 completion order. In the `04_charge_all` trace, the outer traceback ends at the group's line,
 which only says where the group was; the order that failed is in the sub-exception.

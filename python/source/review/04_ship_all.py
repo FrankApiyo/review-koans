@@ -31,4 +31,10 @@ async def ship_all(jobs):
     except Exception:
         running.cancel()
         raise
+    # === wrong: partial — cancels the rest, then reads every result
+    tasks = [asyncio.create_task(job()) for job in jobs]
+    done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_EXCEPTION)
+    for task in pending:
+        task.cancel()
+    return [task.result() for task in tasks]
     # <<<

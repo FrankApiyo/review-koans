@@ -30,7 +30,7 @@ def holds_value_error(error):
     return isinstance(error, ValueError)
 
 
-async def one_fails(review):
+async def one_fails(review, slow_first=False):
     gate, committed = asyncio.Event(), []
 
     async def fails():
@@ -40,7 +40,8 @@ async def one_fails(review):
         await gate.wait()
         committed.append("parcel-2")
 
-    task = asyncio.create_task(review.ship_all([fails, slow]))
+    jobs = [slow, fails] if slow_first else [fails, slow]
+    task = asyncio.create_task(review.ship_all(jobs))
     finished = await settle(task)
     gate.set()
     await turns(5)
@@ -49,7 +50,12 @@ async def one_fails(review):
     assert committed == []
 
 
+async def fails_after_slow(review):
+    await one_fails(review, slow_first=True)
+
+
 CASES = [
     twin("jobs that wait on each other and all succeed", good_jobs),
     exploit("a job that fails while another is still running", one_fails),
+    exploit("a job that fails after a job listed before it", fails_after_slow),
 ]
