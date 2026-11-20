@@ -2,8 +2,7 @@ defmodule Koans.Ch05.EtsTest do
   @moduledoc ~S"""
   Look for: a `lookup` or `member` check followed by a separate write; a table written by
   processes other than its owner while it is `:protected`; a table created by whichever
-  process calls first; and a match spec's guard at a boundary, or a `select_delete` whose
-  body is not `true`.
+  process calls first; a match spec's guard at a boundary; a `select_delete` body not `true`.
 
   Why it bites: two workers both see a job as free, and both process it. A rate limiter
   raises `ArgumentError` on every request from its first deploy. Feature flags vanish when
@@ -22,9 +21,11 @@ defmodule Koans.Ch05.EtsTest do
   `:ordered_set` walks its keys in term order. `select_delete` deletes only the rows for which
   the match spec returns `true`.
 
-  A common mistake: keeping a `lookup` or `member` check in front of the write. Two callers
+  A common mistake: acting on a `lookup` or `member` check in front of the write. Two callers
   both pass it before either writes. Let the write decide alone: `insert_new` and its result,
-  `update_counter` with a default row, or one call in which the owner checks and writes.
+  `update_counter` with a default row, or one call in which the owner checks and writes. The
+  course asks for one atomic `insert_new` and no read before it, as its own choice: a
+  `member` check ahead of an `insert_new` you honour is no race, only redundant.
   Create a shared table in the `init` of a supervised process, never on first use.
 
   Read more: https://www.erlang.org/doc/apps/stdlib/ets.html,
