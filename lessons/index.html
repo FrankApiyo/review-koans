@@ -163,9 +163,19 @@ Exercised by: koans/00_how_review_koans_work_test.exs:42
 Write:        koans/review/00_discount.py
 Exercised by: koans/00_how_review_koans_work_test.py:47
     Fix the bug in koans/review/00_discount.py in place. The hidden checks name what still fails.
-2 of 5 koans answered.</code></pre>
+2 of 18 koans answered.</code></pre>
 <p>The checks are readable in <code>checks/</code>, as the answers are in <code>solutions/</code>. Read them only after a real attempt; reading them first defeats the exercise.</p>
 <p>An import error in a koan file stops the run before any footer: fix what the traceback names, then run <code>pytest</code> again. A fix that loops forever never returns; press Ctrl-C to stop the run. To start again, run <code>git checkout -- koans/</code>.</p>
+</article>
+
+<article id="python-01">
+<h3><small>01</small>Shared mutable state</h3>
+<p>Look for: a mutable default argument (<code>=[]</code>, <code>={}</code>, <code>=set()</code>); a lambda or nested <code>def</code> in a loop that reads the loop variable; <code>[[...]] * n</code>; <code>dict(...)</code>, <code>copy.copy</code> or <code>{**...}</code> on nested data that is then written to; a mutable class attribute used as per-instance state.</p>
+<p>Why it bites: the language evaluates a default once, when <code>def</code> runs, and a class body once, when <code>class</code> runs; every call or instance after that shares the one object. A closure looks its variables up when it runs, not when it is made. So one request's errors, or one user's token, shows up in the next request, and nothing fails until two calls happen in one process.</p>
+<p>Review habit: Ask what happens with two at once. Call the function twice, or make two objects, and follow every mutable value back to where it was created. If it was created once, at definition time or at module level, each write lands where the next caller will read it.</p>
+<p class="mistake"><strong>A common mistake:</strong> patching the symptom. <code>errors = errors or []</code> drops the caller's empty list; copying an argument the caller shares on purpose breaks callers that rely on it; a shallow copy of nested data still shares the inner dict. <code>self.items = self.items + [sku]</code> happens to work but leaves the shared list in place for the next method that appends; give each instance its own list in <code>__init__</code>. A traceback can miss the cause: in the <code>01_note</code> trace, the field at fault is on line 7, which no frame prints. Read the error, then find the field it names.</p>
+<p class="more">Read more</p>
+<ul class="links"><li><a href="https://docs.python.org/3.13/faq/programming.html">https://docs.python.org/3.13/faq/programming.html</a></li><li><a href="https://docs.python.org/3.13/library/copy.html">https://docs.python.org/3.13/library/copy.html</a></li><li><a href="https://docs.python.org/3.13/library/dataclasses.html">https://docs.python.org/3.13/library/dataclasses.html</a></li></ul>
 </article>
 </section>
 <footer>Built by <code>tools/lessons.py</code> from the lessons in each track's <code>source/</code> folder. Lessons are under CC BY 4.0; see <code>LICENSE-lessons</code>.</footer>
