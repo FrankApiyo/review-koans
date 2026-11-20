@@ -1,0 +1,11 @@
+exit 0
+--- stdout
+
+[error] Process #PID<0.256.0> raised an exception
+** (Ecto.NoResultsError) expected at least one result but got none in query:
+
+from p0 in Course.Ch06.Post,
+  where: p0.id == ^1 and p0.user_id == ^2
+
+    (ecto 3.14.3) lib/ecto/repo/queryable.ex:178: Ecto.Repo.Queryable.one!/3
+--- stderr

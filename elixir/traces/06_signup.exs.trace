@@ -1,0 +1,22 @@
+exit 0
+--- stdout
+
+[error] Process #PID<0.256.0> raised an exception
+** (Ecto.ConstraintError) constraint error when attempting to insert struct:
+
+    * "blog_users_email_index" (unique_constraint)
+
+If you would like to stop this constraint violation from raising an
+exception and instead add it as an error to your changeset, please
+call `unique_constraint/3` on your changeset with the constraint
+`:name` as an option.
+
+The changeset has not defined any constraint.
+
+    (ecto 3.14.3) lib/ecto/repo/schema.ex:1112: anonymous fn/4 in Ecto.Repo.Schema.constraints_to_errors/3
+    (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+    (ecto 3.14.3) lib/ecto/repo/schema.ex:1095: Ecto.Repo.Schema.constraints_to_errors/3
+    (ecto 3.14.3) lib/ecto/repo/schema.ex:1065: Ecto.Repo.Schema.apply/4
+    (ecto 3.14.3) lib/ecto/repo/schema.ex:505: anonymous fn/17 in Ecto.Repo.Schema.do_insert/4
+    traces/06_signup.exs:10: Accounts.register/1
+--- stderr

@@ -74,7 +74,7 @@ defmodule Verify.SupportTest do
 
   test "repo starts and migrations run in a fresh build path" do
     assert Path.dirname(Db.path()) == Mix.Project.build_path()
-    assert rows("SELECT version FROM schema_migrations") == [[1]]
+    assert rows("SELECT version FROM schema_migrations ORDER BY version") == [[1], [6]]
     assert rows("SELECT count(*) FROM verify_owners") == [[0]]
     assert Support.Migrations.run!() == :ok
   end
