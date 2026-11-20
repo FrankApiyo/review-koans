@@ -27,8 +27,8 @@ FILE_URL = "file://"
 FILESYSTEM_ROOTS = (
     "/" + "Users/", "/" + "home/", "/private/", "/var/folders/", "/tmp/", "/opt/", "/usr/", "/nix/"
 )
-# LiveView's ids are 16 url-safe base64 characters; phx- attributes are lower case.
-LIVEVIEW_ID = re.compile(r"(?<![\w-])phx-(?=[\w-]{0,15}[A-Z0-9])[\w-]{16}(?![\w-])", re.ASCII)
+# A LiveView id holds an upper-case letter; phx- attribute names are lower case or followed by "=".
+LIVEVIEW_ID = re.compile(r"(?<![\w-])phx-(?=[\w-]*[A-Z])[\w-]{12,}(?![\w=-])", re.ASCII)
 RUNTIME_APPS = "stdlib|kernel|elixir|mix|ex_unit|logger|compiler|iex"
 RUNTIME_FRAME = re.compile(
     rf"^\s+(\((?:{RUNTIME_APPS})(?: [^)]*)?\) |at .*\bnode:internal/)"

@@ -165,6 +165,34 @@ def test_mask_hides_a_liveview_id_but_keeps_phx_attributes():
         assert f'{attribute}="' in masked
 
 
+@pytest.mark.parametrize(
+    "liveview_id", ["phx-GOjFmOiYZVJevRSD", "phx-GOjFtvxTWuABD-_8", "phx-GOjFtvxTWuABD-_8xY2z"]
+)
+def test_mask_hides_a_liveview_id_of_any_length(liveview_id):
+    masked = mask(f'<div id="{liveview_id}"> lv:{liveview_id} {liveview_id}\n')
+
+    assert liveview_id not in masked
+    assert masked == '<div id="phx-_"> lv:phx-_ phx-_'
+
+
+@pytest.mark.parametrize(
+    "attribute",
+    [
+        "phx-click",
+        "phx-click-loading",
+        "data-phx-main",
+        "phx-value-question_1",
+        'phx-value-question_1="x"',
+        "phx-value-category12",
+        "phx-value-user-id-42",
+    ],
+)
+def test_mask_keeps_attribute_names_with_digits(attribute):
+    markup = f"<button {attribute} phx-value-identifier>"
+
+    assert mask(markup) == markup
+
+
 def test_refusal_accepts_routes():
     assert traces.refusal(ROUTES) is None
 

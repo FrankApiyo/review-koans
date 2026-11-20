@@ -16,7 +16,7 @@ defmodule Koans.Trace do
   @stop_reason ~r/^\*\* \(stop\) (.*)$/m
   @event ~r/"event" => "([^"]*)"/
   @init_frame ~r/\{\s*([A-Z]\w*(?:\.[A-Z]\w*)*),\s+:init,\s+1,\s+\[\s*file:\s+~c"traces\/[^"]*",\s+line:\s+(\d+)\s*\]\s*\}/
-  @varying ~r/#PID<|#Reference<|#Port<|(?<![\w-])phx-(?=[\w-]{0,15}[A-Z0-9])[\w-]{16}(?![\w-])/
+  @varying ~r/#PID<|#Reference<|#Port<|(?<![\w-])phx-(?=[\w-]*[A-Z])[\w-]{12,}(?![\w=-])/
 
   @spec read!(String.t()) :: String.t()
   def read!(name), do: File.read!(Path.join("traces", name <> ".exs.trace"))

@@ -152,4 +152,28 @@ defmodule Verify.TraceTest do
     assert with_trace("Last message: {:render, #{markup}}\n", &Trace.last_message/1) ==
              "{:render, #{markup}}"
   end
+
+  test "an answer holding a LiveView id of any length raises" do
+    for id <- ["phx-GOjFmOiYZVJevRSD", "phx-GOjFtvxTWuABD-_8", "phx-GOjFtvxTWuABD-_8xY2z"] do
+      assert_raise ArgumentError, ~r/changes on every capture/, fn ->
+        with_trace("Last message: {:joined, #{id}}\n", &Trace.last_message/1)
+      end
+    end
+  end
+
+  test "an answer holding phx- attribute names with digits is kept" do
+    for attribute <- [
+          "phx-click",
+          "phx-click-loading",
+          "data-phx-main",
+          "phx-value-question_1",
+          ~s(phx-value-question_1="x"),
+          "phx-value-category12",
+          "phx-value-user-id-42"
+        ] do
+      markup = "<button #{attribute} phx-value-identifier>"
+
+      assert with_trace("Last message: #{markup}\n", &Trace.last_message/1) == markup
+    end
+  end
 end
