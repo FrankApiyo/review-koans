@@ -5,7 +5,8 @@ import sys
 
 import pytest
 
-from dialects import DIALECTS, ELIXIR, dialect_for
+import harness
+from dialects import DIALECTS, ELIXIR, PYTHON, dialect_for
 from generate import (
     ROOT,
     Also,
@@ -667,3 +668,143 @@ def test_blank_variants_leave_exactly_one_blank():
     verdict_variant, at = render_test_variant("t.exs", BLANKS_TEST, ELIXIR, reviews, 3)
     assert verdict_variant.splitlines()[at - 1].startswith('  verdict("double.ex", __, "')
     assert verdict_variant.replace(", __, ", ", 3, ") == solutions
+
+
+# Python dialect.
+
+PYTHON_ANSWERS = ['")"', "')'", 'b")"', 'r"\\)"', '"""\n)\n"""', "(1, (2,))", "[1,  # )\n 2]"]
+
+
+@pytest.mark.parametrize("answer", PYTHON_ANSWERS)
+def test_python_value_blank_skips_parens_in_strings_bytes_raw_triple_quotes_and_comments(answer):
+    src = f"assert x == _a({answer})\n"
+    assert render_values("t_test.py", src, PYTHON, solved=False) == "assert x == __\n"
+    assert render_values("t_test.py", src, PYTHON, solved=True) == f"assert x == {answer}\n"
+
+
+def test_python_f_string_inside_answer_is_refused():
+    with pytest.raises(GenerationError, match=r"t_test\.py:1: f-string inside _a\("):
+        render_values("t_test.py", 'assert x == _a(f"{1}")\n', PYTHON, solved=False)
+
+
+def test_python_unclosed_answer_names_its_line():
+    with pytest.raises(GenerationError, match=r"t_test\.py:2: unclosed _a\("):
+        render_values("t_test.py", "a\nassert x == _a(1\n", PYTHON, solved=False)
+
+
+def test_python_code_block_renders_a_call_blank():
+    src = "    # >>> answer\n    x = 1\n    # <<<\n"
+    assert render_code_blocks("t_test.py", src, PYTHON, solved=False) == "    __()\n"
+    assert render_code_blocks("t_test.py", src, PYTHON, solved=True) == "    x = 1\n"
+
+
+def test_python_fine_verdict_renders_fine_token():
+    source = "def f():\n    # >>> guard\n    return 1\n    # === wrong: partial — returns nothing\n    # <<<\n"
+    reviews = {"f.py": render_review("review/f.py", source, PYTHON)}
+    koans, solutions = render_test("t_test.py", 'verdict("f.py", _a(FINE))\n', PYTHON, reviews)
+    fine, sha = digest("f.py", "fine"), reviews["f.py"].source_digest
+    assert koans == f'verdict("f.py", __, "{fine}", "{sha}")\n'
+    assert solutions == f'verdict("f.py", FINE, "{fine}", "{sha}")\n'
+
+
+def py_fix(indent, fixed="x = 2"):
+    return (
+        f"{indent}# >>> fix\n{indent}# === fixed\n{indent}{fixed}\n"
+        f"{indent}# === wrong: refuses — rejects\n{indent}raise ValueError\n"
+        f"{indent}# === wrong: partial — half\n{indent}x = 3\n{indent}# <<<\n"
+    )
+
+
+def test_python_omission_accepts_line_before_after_and_def_head():
+    src = "async def f(x):\n    a = 1\n" + py_fix("    ") + "    return a\n"
+    review = render_review("o.py", src, PYTHON)
+    assert review.accepted == {2, 3, 1}
+
+
+def test_python_omission_in_a_method_accepts_the_def_not_the_class():
+    src = "class C:\n    def m(self):\n        a = 1\n" + py_fix("        ") + "        return a\n"
+    assert render_review("o.py", src, PYTHON).accepted == {3, 4, 2}
+
+
+def test_python_class_level_omission_accepts_the_class_head():
+    src = (
+        "class C:\n    def a(self):\n        return 1\n\n"
+        + py_fix("    ")
+        + "\n    def b(self):\n        return 2\n"
+    )
+    review = render_review("o.py", src, PYTHON)
+    assert review.accepted == {3, 6, 1}
+
+
+def test_python_top_level_omission_is_refused():
+    src = "x = 1\n" + py_fix("")
+    with pytest.raises(GenerationError, match=r"o\.py:2: omission with no enclosing function or module head"):
+        render_review("o.py", src, PYTHON)
+
+
+def test_python_also_in_a_module_without_classes_is_accepted():
+    src = (
+        "def f(x):\n"
+        "    # >>> fix\n"
+        "    # also: y = 2 — equivalent\n"
+        "    x = 1\n"
+        "    # === fixed\n"
+        "    x = 2\n"
+        "    # === wrong: refuses — rejects\n"
+        "    raise ValueError\n"
+        "    # === wrong: partial — half\n"
+        "    x = 3\n"
+        "    # <<<\n"
+        "    y = 2\n"
+        "    return x\n"
+    )
+    review = render_review("o.py", src, PYTHON)
+    assert [also.line for block in review.blocks for also in block.also] == [3]
+    assert 3 in review.accepted
+
+
+def test_python_lesson_is_the_module_docstring():
+    text = '"""\nLook for: x\n    indented\n"""\n\ndef test_a():\n    pass\n'
+    assert PYTHON.lesson(text) == "Look for: x\n    indented"
+    assert PYTHON.lesson("def test_a():\n    pass\n") is None
+
+
+def test_python_meditation_is_the_docstring_after_the_koan_head():
+    text = 'def test_a(x):\n    """Why it fails"""\n    assert x\n\ndef test_b(x):\n    assert x\n'
+    assert harness.meditation(text, 1, PYTHON) == "Why it fails"
+    assert harness.meditation(text, 5, PYTHON) is None
+    assert harness.koan_lines(text, PYTHON) == [1, 5]
+    assert harness.fix_koan_line(text, 3, PYTHON) == 5
+    assert harness.enclosing_koan(text, 3, PYTHON) == 1
+    assert harness.koan_body(text, 1, PYTHON) == "\n".join(text.splitlines()[0:4])
+
+
+PYTHON_TRACK = {
+    "source/01_a_test.py": "def test_a():\n    assert 1 == _a(1)\n",
+    "source/review/01_r.py": "def f():\n    # >>> guard\n    return 1\n    # === wrong: partial — nothing\n    # <<<\n",
+    "source/01_b_test.py": 'def test_b():\n    verdict("01_r.py", _a(FINE))\n',
+}
+
+
+def test_python_track_generates_and_checks_clean(tmp_path, capsys):
+    for rel, content in PYTHON_TRACK.items():
+        path = tmp_path / "python" / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+    assert main([], root=tmp_path) == 0
+    assert (tmp_path / "python/koans/01_a_test.py").read_text() == "def test_a():\n    assert 1 == __\n"
+    assert "FINE" in (tmp_path / "python/solutions/01_b_test.py").read_text()
+    capsys.readouterr()
+    assert main(["--check", "python"], root=tmp_path) == 0
+    assert capsys.readouterr().out == ""
+
+
+def test_elixir_koan_helpers_are_unchanged():
+    text = 'defmodule T do\n  koan "first" do\n    x\n  end\n\n  koan "second" do\n    y\n  end\nend\n'
+    assert harness.koan_lines(text) == [2, 6]
+    assert harness.meditation(text, 2) == "first"
+    assert harness.meditation(text, 3) is None
+    assert harness.fix_koan_line(text, 3) == 6
+    assert harness.enclosing_koan(text, 7) == 6
+    assert harness.koan_body(text, 2) == "\n".join(text.splitlines()[1:5])
+    assert harness.KOAN_START is ELIXIR.koan_head

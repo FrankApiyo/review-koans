@@ -9,3 +9,4 @@ erl_crash.dump
 .elixir_ls/
 _build_*/
 /elixir/_variants/
+/python/_variants/

@@ -9,12 +9,12 @@ from pathlib import Path
 from typing import Literal
 
 import generate
-from dialects import dialect_for
+from dialects import ELIXIR, Dialect, dialect_for
 
 ROOT = Path(__file__).resolve().parent.parent
 CHAPTER_VARIABLE = "REVIEW_KOANS_CHAPTER"
 CHAPTER = re.compile(r"^(\d\d)_")
-KOAN_START = re.compile(r'^\s*koan\s+"')
+KOAN_START = ELIXIR.koan_head
 KOAN_HEAD = re.compile(r'^\s*koan\s+"(?P<meditation>(?:[^"\\]|\\.)*)"\s+do\s*$')
 RENDERED_VERDICT = re.compile(
     r'verdict\("(?P<file>[^"\n]+)", (?P<answer>[^,\n]+), "(?P<digests>[^"\n]*)", "(?P<source>[^"\n]*)"\)'
@@ -126,35 +126,34 @@ def verdict_calls(track: str) -> list[VerdictCall]:
     return calls
 
 
-def koan_lines(text: str) -> list[int]:
-    return [number for number, line in enumerate(text.splitlines(), 1) if KOAN_START.match(line)]
+def koan_lines(text: str, dialect: Dialect = ELIXIR) -> list[int]:
+    return [number for number, line in enumerate(text.splitlines(), 1) if dialect.koan_head.match(line)]
 
 
-def fix_koan_line(test_text: str, verdict_line: int) -> int:
-    later = [line for line in koan_lines(test_text) if line > verdict_line]
+def fix_koan_line(test_text: str, verdict_line: int, dialect: Dialect = ELIXIR) -> int:
+    later = [line for line in koan_lines(test_text, dialect) if line > verdict_line]
     if not later:
         raise ValueError(f"no koan follows the verdict on line {verdict_line}")
     return later[0]
 
 
-def enclosing_koan(test_text: str, line: int) -> int:
-    earlier = [start for start in koan_lines(test_text) if start <= line]
+def enclosing_koan(test_text: str, line: int, dialect: Dialect = ELIXIR) -> int:
+    earlier = [start for start in koan_lines(test_text, dialect) if start <= line]
     if not earlier:
         raise ValueError(f"line {line} is above every koan")
     return earlier[-1]
 
 
-def koan_body(test_text: str, koan_line: int) -> str:
+def koan_body(test_text: str, koan_line: int, dialect: Dialect = ELIXIR) -> str:
     """The text from a koan's head up to the next koan's head, or the end of the file."""
     lines = test_text.splitlines()
-    later = [line for line in koan_lines(test_text) if line > koan_line]
+    later = [line for line in koan_lines(test_text, dialect) if line > koan_line]
     end = later[0] - 1 if later else len(lines)
     return "\n".join(lines[koan_line - 1 : end])
 
 
-def meditation(test_text: str, koan_line: int) -> str | None:
-    match = KOAN_HEAD.match(test_text.splitlines()[koan_line - 1])
-    return match["meditation"] if match else None
+def meditation(test_text: str, koan_line: int, dialect: Dialect = ELIXIR) -> str | None:
+    return dialect.meditation(test_text.splitlines(), koan_line)
 
 
 def _allowlist(allowlist: Path | None) -> set[tuple[str, str]]:

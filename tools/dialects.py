@@ -20,6 +20,8 @@ class Dialect:
     find_value_end: Callable[[str, int], int]
     forbidden_in_value: re.Pattern[str]
     lesson: Callable[[str], str | None]
+    koan_head: re.Pattern[str]
+    meditation: Callable[[list[str], int], str | None]
 
 
 _SIGIL = re.compile(r"~[a-zA-Z]")
@@ -97,6 +99,15 @@ def _elixir_lesson(text: str) -> str | None:
     return textwrap.dedent(match.group(1)).strip("\n") if match else None
 
 
+ELIXIR_KOAN_HEAD = re.compile(r'^\s*koan\s+"')
+_ELIXIR_MEDITATION = re.compile(r'^\s*koan\s+"(?P<meditation>(?:[^"\\]|\\.)*)"\s+do\s*$')
+
+
+def _elixir_meditation(lines: list[str], koan_line: int) -> str | None:
+    match = _ELIXIR_MEDITATION.match(lines[koan_line - 1])
+    return match["meditation"] if match else None
+
+
 ELIXIR_FORBIDDEN = _SIGIL
 
 ELIXIR = Dialect(
@@ -112,9 +123,85 @@ ELIXIR = Dialect(
     find_value_end=_elixir_value_end,
     forbidden_in_value=ELIXIR_FORBIDDEN,
     lesson=_elixir_lesson,
+    koan_head=ELIXIR_KOAN_HEAD,
+    meditation=_elixir_meditation,
 )
 
-DIALECTS: dict[str, Dialect] = {ELIXIR.name: ELIXIR}
+PYTHON_FORBIDDEN = re.compile(r"(?<![\w])[fF][rR]?['\"]|(?<![\w])[rR][fF]['\"]")
+_PYTHON_DOCSTRING = re.compile(r'\A"""\n?(.*?)\n?"""', re.DOTALL)
+_PYTHON_MEDITATION = re.compile(r'^\s+"""(.*)"""\s*$')
+
+
+def _skip_python_string(text: str, i: int) -> int:
+    quote = text[i : i + 3] if text.startswith(('"""', "'''"), i) else text[i]
+    i += len(quote)
+    while i < len(text):
+        if text[i] == "\\":
+            i += 2
+        elif text.startswith(quote, i):
+            return i + len(quote)
+        else:
+            i += 1
+    raise ValueError("unclosed _a(")
+
+
+def _python_value_end(text: str, start: int) -> int:
+    depth = 1
+    i = start
+    while i < len(text):
+        ch = text[i]
+        if PYTHON_FORBIDDEN.match(text, i):
+            raise ValueError("f-string inside _a(")
+        if ch in "\"'":
+            i = _skip_python_string(text, i)
+        elif ch == "#":
+            newline = text.find("\n", i)
+            if newline == -1:
+                break
+            i = newline
+        elif ch == "(":
+            depth += 1
+            i += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0:
+                return i
+            i += 1
+        else:
+            i += 1
+    raise ValueError("unclosed _a(")
+
+
+def _python_lesson(text: str) -> str | None:
+    match = _PYTHON_DOCSTRING.search(text)
+    return textwrap.dedent(match.group(1)).strip() if match else None
+
+
+def _python_meditation(lines: list[str], koan_line: int) -> str | None:
+    if koan_line >= len(lines):
+        return None
+    match = _PYTHON_MEDITATION.match(lines[koan_line])
+    return match.group(1) if match else None
+
+
+PYTHON = Dialect(
+    name="python",
+    comment="#",
+    test_glob="*_test.py",
+    review_glob="review/*.py",
+    value_blank="__",
+    fine="FINE",
+    code_blank=lambda _tag: "__()",
+    function_head=re.compile(r"^\s*(async\s+)?def\b"),
+    module_head=re.compile(r"^\s*class\b"),
+    find_value_end=_python_value_end,
+    forbidden_in_value=PYTHON_FORBIDDEN,
+    lesson=_python_lesson,
+    koan_head=re.compile(r"^def test_\w+\("),
+    meditation=_python_meditation,
+)
+
+DIALECTS: dict[str, Dialect] = {ELIXIR.name: ELIXIR, PYTHON.name: PYTHON}
 
 
 def dialect_for(track: str) -> Dialect:
