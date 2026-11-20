@@ -14,6 +14,7 @@ defmodule Koans.Setup do
   # once the database is up, so a failed connect still logs its cause.
   @spec start!() :: :ok
   def start! do
+    warn_on_untested_runtime()
     put_env()
     Enum.each(Db.files(), &remove_stale!/1)
 
@@ -27,6 +28,28 @@ defmodule Koans.Setup do
     :ok = Support.Migrations.run!()
     _ = :logger.remove_handler(:default)
     :ok
+  end
+
+  @tested_elixir "1.19"
+  @tested_otp "28"
+
+  @spec runtime_warning(String.t(), String.t()) :: String.t() | nil
+  def runtime_warning(elixir_version, otp_release) do
+    tested_elixir? = String.starts_with?(elixir_version, @tested_elixir <> ".")
+
+    if tested_elixir? and otp_release == @tested_otp do
+      nil
+    else
+      "Warning: this course is tested on Elixir #{@tested_elixir}.x and OTP #{@tested_otp}; " <>
+        "you have Elixir #{elixir_version} and OTP #{otp_release}, so a result may differ."
+    end
+  end
+
+  defp warn_on_untested_runtime do
+    case runtime_warning(System.version(), System.otp_release()) do
+      nil -> :ok
+      line -> IO.puts(:stderr, line)
+    end
   end
 
   defp remove_stale!(file) do

@@ -26,7 +26,7 @@ cd review-koans
 
 ### Setup
 
-You need Elixir 1.19 and OTP 28, and `mix` on your path. See the [Elixir install page](https://elixir-lang.org/install.html). No version manager is required.
+You need Elixir 1.19 and OTP 28, and `mix` on your path. See the [Elixir install page](https://elixir-lang.org/install.html). The course is tested on Elixir 1.19.5 and OTP 28. If you use asdf or mise, run `asdf install` or `mise install` in the repo root: `.tool-versions` pins those versions.
 
 ```sh
 cd elixir
@@ -34,6 +34,8 @@ mix deps.get
 ```
 
 `mix deps.get` fetches the source packages. The first `mix test` compiles them and downloads the precompiled native libraries for two of them (`exqlite` and `lazy_html`) from GitHub, so it needs a network and takes a minute or two. You need a C compiler and `make` only on a machine where no precompiled library matches.
+
+On a fresh machine, `mix deps.get` may ask to install Hex, and the first compile may ask to install rebar3. Answer yes to both.
 
 Every run after the first compile is offline.
 
@@ -48,9 +50,10 @@ mix test
 It stops at the first koan that fails, and prints a footer that says where to work. A blank looks like this:
 
 ```
+Replace __ with the value that makes this true.
 ------------------------------- The master says --------------------------------
 Meditate on koans/00_how_review_koans_work_test.exs:34
-    Replace __ with the value that makes this true.
+    A predict koan: the blank holds the value that makes the assertion true.
 0 of 128 koans answered.
 ```
 
@@ -142,18 +145,18 @@ uv pip install pytest==9.2.0
 Then:
 
 ```sh
-python tools/generate.py                  # write koans/ and solutions/ from source/
-python tools/generate.py --check          # fail if they are out of date
-python tools/traces.py capture elixir     # re-run the trace programs and save their output
-python tools/traces.py check elixir       # fail if a saved trace is out of date
-python tools/lessons.py                   # rebuild lessons/index.html
-pytest tests/                             # the self-tests
+.venv/bin/python tools/generate.py                  # write koans/ and solutions/ from source/
+.venv/bin/python tools/generate.py --check          # fail if they are out of date
+.venv/bin/python tools/traces.py capture elixir     # re-run the trace programs and save their output
+.venv/bin/python tools/traces.py check elixir       # fail if a saved trace is out of date
+.venv/bin/python tools/lessons.py                   # rebuild lessons/index.html
+.venv/bin/pytest tests/                             # the self-tests
 ```
 
-The generator and trace tools use the Python standard library only. Run `source .venv/bin/activate` first, or call `.venv/bin/pytest`.
+The generator and trace tools use the Python standard library only. The commands call the venv directly, so no activation is needed.
 
-`REVIEW_KOANS_CHAPTER=NN pytest tests/test_elixir.py` runs the Elixir self-tests for one chapter.
+`REVIEW_KOANS_CHAPTER=NN .venv/bin/pytest tests/test_elixir.py` runs the Elixir self-tests for one chapter.
 
 ## Licence
 
-The code is under the Apache License 2.0 (see `LICENSE`). The lessons are under Creative Commons Attribution 4.0 (see `LICENSE-lessons`). See `NOTICE`.
+The code is under the Apache License 2.0 (see `LICENSE`). The lessons are under Creative Commons Attribution 4.0 (see `LICENSE-lessons`). The lessons are the lesson text at the top of each chapter file and `lessons/index.html`; everything else is under Apache 2.0. See `NOTICE`.

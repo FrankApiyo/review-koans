@@ -507,3 +507,24 @@ def test_readme_counts_match_the_koans():
         total for _, total in re.findall(r"(\d+) of (\d+) koans", readme)
     } == {str(koans)}
     assert f"All {koans} koans pass" in readme
+
+
+def test_readme_first_footer_is_what_the_first_blank_prints():
+    koans_dir = TRACK_DIR / "koans"
+    text = (koans_dir / "00_how_review_koans_work_test.exs").read_text(encoding="utf-8")
+    total = sum(
+        len(re.findall(r'^  koan "', f.read_text(encoding="utf-8"), re.M))
+        for f in koans_dir.glob("[0-9][0-9]_*_test.exs")
+    )
+    first = koan_lines(text)[0]
+    blank = next(n for n, line in enumerate(text.splitlines(), 1) if n > first and re.search(r"(?<!\w)__(?!\w)", line))
+    expected = (
+        "Replace __ with the value that makes this true.\n"
+        f"{'-' * 31} The master says {'-' * 32}\n"
+        f"Meditate on koans/00_how_review_koans_work_test.exs:{blank}\n"
+        f"    {meditation(text, first)}\n"
+        f"0 of {total} koans answered.\n"
+    )
+    readme = (TRACK_DIR.parent / "README.md").read_text(encoding="utf-8")
+    blocks = re.findall(r"^```[^\n]*\n(.*?)^```", readme, re.S | re.M)
+    assert expected in blocks

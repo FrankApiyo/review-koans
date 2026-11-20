@@ -25,6 +25,18 @@ defmodule Verify.SetupTest do
     )
   end
 
+  test "the runtime warning names the tested versions and stays quiet on them" do
+    assert Koans.Setup.runtime_warning("1.19.5", "28") == nil
+    assert Koans.Setup.runtime_warning("1.19.0", "28") == nil
+
+    for {elixir, otp} <- [{"1.20.0", "28"}, {"1.18.4", "28"}, {"1.19.5", "29"}, {"1.190.0", "28"}] do
+      line = Koans.Setup.runtime_warning(elixir, otp)
+      assert line =~ "Warning: this course is tested on Elixir 1.19.x and OTP 28"
+      assert line =~ "Elixir #{elixir} and OTP #{otp}"
+      refute line =~ "\n"
+    end
+  end
+
   test "a stale database file that cannot be removed stops startup with its path", %{build: build} do
     File.mkdir_p!(Path.join([build, "review_koans.sqlite3", "kept"]))
 
