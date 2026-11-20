@@ -20,4 +20,5 @@ def run_pytest(*args: str, verify: bool = False) -> subprocess.CompletedProcess[
         capture_output=True,
         text=True,
         check=False,
+        timeout=120,
     )
