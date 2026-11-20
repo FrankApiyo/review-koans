@@ -1,0 +1,11 @@
+exit 1
+--- stdout
+--- stderr
+Traceback (most recent call last):
+  File "traces/05_is_expired.py", line 10, in <module>
+    print(is_expired(expires_at, now))
+          ~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "traces/05_is_expired.py", line 5, in is_expired
+    return now >= expires_at
+           ^^^^^^^^^^^^^^^^^
+TypeError: can't compare offset-naive and offset-aware datetimes
