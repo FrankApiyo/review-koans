@@ -1,0 +1,33 @@
+defmodule Review.Ch07.NotesLive do
+  @moduledoc """
+  The signed-in user's notes at `/ch07/notes`, filtered by the tag in the URL, as in
+  `/ch07/notes?tag=food`, so a filtered list can be bookmarked. Choosing a tag patches the
+  URL: the same LiveView stays, and the browser's back button returns to the previous tag.
+  """
+
+  use Phoenix.LiveView
+
+  alias Course.Ch07.Store
+
+  def mount(params, %{"uid" => uid}, socket) do
+    {:ok, assign(socket, uid: uid, items: tagged(uid, params["tag"]))}
+  end
+
+  def handle_params(_params, _uri, socket), do: {:noreply, socket}
+
+  def handle_event("tag", %{"tag" => tag}, socket) do
+    {:noreply, push_patch(socket, to: "/ch07/notes?" <> URI.encode_query(tag: tag))}
+  end
+
+  defp tagged(uid, nil), do: Store.for_user(uid)
+  defp tagged(uid, tag), do: Enum.filter(Store.for_user(uid), &(&1.tag == tag))
+
+  def render(assigns) do
+    ~H"""
+    <button :for={tag <- ["food", "drink"]} phx-click="tag" phx-value-tag={tag}>{tag}</button>
+    <ul>
+      <li :for={item <- @items} id={"item-#{item.id}"}>{item.title}</li>
+    </ul>
+    """
+  end
+end

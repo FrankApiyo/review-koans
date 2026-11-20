@@ -1,0 +1,19 @@
+exit 0
+--- stdout
+
+[error] GenServer #PID<0.272.0> terminating
+** (KeyError) key :total not found in:
+
+    %{items: []}
+
+    traces/07_checkout_crash.exs:8: Checkout.handle_event/3
+    (phoenix_live_view 1.1.33) lib/phoenix_live_view/channel.ex:532: anonymous fn/3 in Phoenix.LiveView.Channel.view_handle_event/3
+    (telemetry 1.4.2) deps/telemetry/src/telemetry.erl:359: :telemetry.span/3
+    (phoenix_live_view 1.1.33) lib/phoenix_live_view/channel.ex:260: Phoenix.LiveView.Channel.handle_info/2
+    (stdlib 7.3) gen_server.erl:2434: :gen_server.try_handle_info/3
+    (stdlib 7.3) gen_server.erl:2420: :gen_server.handle_msg/3
+    (stdlib 7.3) proc_lib.erl:333: :proc_lib.init_p_do_apply/3
+Process Label: {Phoenix.LiveView, Checkout, "lv:phx-GOms4mXMdsqHkgTh"}
+Last message: %Phoenix.Socket.Message{topic: "lv:phx-GOms4mXMdsqHkgTh", event: "event", payload: %{"event" => "checkout", "type" => "click", "value" => %{}}, ref: "1", join_ref: 0}
+State: %{socket: #Phoenix.LiveView.Socket<id: "phx-GOms4mXMdsqHkgTh", endpoint: Support.Endpoint, view: Checkout, parent_pid: nil, root_pid: #PID<0.272.0>, router: nil, assigns: %{cart: %{items: []}, __changed__: %{}, flash: %{}, live_action: nil}, transport_pid: #PID<0.270.0>, sticky?: nil, ...>, components: {%{}, %{}, 1}, topic: "lv:phx-GOms4mXMdsqHkgTh", serializer: Phoenix.LiveViewTest.ClientProxy, join_ref: 0, fingerprints: {110575419897029121795849444577547210670, %{}}, redirect_count: 0, upload_names: %{}, upload_pids: %{}}
+--- stderr

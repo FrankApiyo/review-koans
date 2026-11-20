@@ -33,16 +33,6 @@ defmodule Verify.SupportTest do
     def render(assigns), do: ~H|<p id="uid">{@uid}</p>|
   end
 
-  defmodule RoutedLive do
-    use Phoenix.LiveView
-
-    def mount(_params, %{"uid" => uid}, socket), do: {:ok, assign(socket, uid: uid, id: nil)}
-
-    def handle_params(%{"id" => id}, _uri, socket), do: {:noreply, assign(socket, id: id)}
-
-    def render(assigns), do: ~H|<p id="uid">{@uid}</p><p id="id">{@id}</p>|
-  end
-
   setup_all do
     stale = "left by an earlier run"
     File.write!(Db.path(), stale)
@@ -122,10 +112,21 @@ defmodule Verify.SupportTest do
   end
 
   test "live via the router renders and handle_params runs" do
-    {:ok, view, html} = live(Support.Live.conn(3), "/verify/routed/42")
+    start_supervised!(
+      {Course.Ch07.Store,
+       [
+         %{id: 1, title: "pen", user_id: 3, tag: "desk"},
+         %{id: 2, title: "ink", user_id: 4, tag: "desk"}
+       ]}
+    )
 
-    assert html =~ ~s(<p id="uid">3</p><p id="id">42</p>)
-    assert render(view) =~ ~s(<p id="uid">3</p><p id="id">42</p>)
+    {:ok, view, html} = live(Support.Live.conn(3), "/ch07/dashboard?tag=desk")
+
+    for page <- [html, render(view)] do
+      assert page =~ ~s(<p id="mode">live</p>)
+      assert page =~ ~s(<p id="count">1</p>)
+      assert page =~ ~s(<p id="tag">desk</p>)
+    end
   end
 
   test "the endpoint is not serving" do

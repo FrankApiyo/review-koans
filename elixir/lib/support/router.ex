@@ -3,16 +3,18 @@ defmodule Support.Router do
 
   import Phoenix.LiveView.Router
 
-  # verify/support_test.exs defines this LiveView, after lib compiles; it is not course code.
-  @compile {:no_warn_undefined, Verify.SupportTest.RoutedLive}
+  # Review modules compile with the koans and solutions trees; the verify build has none.
+  @compile {:no_warn_undefined, Review.Ch07.NotesLive}
 
   pipeline :browser do
+    plug :fetch_query_params
     plug :fetch_session
   end
 
-  scope "/verify" do
+  scope "/ch07" do
     pipe_through :browser
 
-    live "/routed/:id", Verify.SupportTest.RoutedLive
+    live "/dashboard", Course.Ch07.DashboardLive
+    live "/notes", Review.Ch07.NotesLive
   end
 end

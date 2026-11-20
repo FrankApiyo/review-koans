@@ -6,6 +6,9 @@ https://hexdocs.pm/elixir/1.19.5/Process.html
 https://hexdocs.pm/elixir/1.19.5/Supervisor.html
 https://hexdocs.pm/elixir/1.19.5/Task.html
 https://hexdocs.pm/elixir/1.19.5/processes.html
+https://hexdocs.pm/phoenix_live_view/1.1.33/Phoenix.LiveView.html
+https://hexdocs.pm/phoenix_live_view/1.1.33/security-model.html
+https://hexdocs.pm/phoenix_pubsub/2.4.1/Phoenix.PubSub.html
 https://www.erlang.org/doc/apps/erts/erlang.html
 https://www.erlang.org/doc/apps/erts/match_spec.html
 https://www.erlang.org/doc/apps/stdlib/ets.html
