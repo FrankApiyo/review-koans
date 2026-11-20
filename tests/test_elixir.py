@@ -492,3 +492,7 @@ def test_review_meditations_use_the_frozen_wording(call):
 
 def test_learner_commands_are_frozen():
     assert LEARNER_TEST_ALIAS in (TRACK_DIR / "mix.exs").read_text(encoding="utf-8")
+    readme = (TRACK_DIR.parent / "README.md").read_text(encoding="utf-8")
+    code_blocks = "\n".join(re.findall(r"```[^\n]*\n(.*?)```", readme, re.S))
+    for command in ("cd elixir", "mix deps.get", "mix test"):
+        assert command in code_blocks, command
