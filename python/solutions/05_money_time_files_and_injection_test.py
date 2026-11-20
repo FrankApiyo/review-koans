@@ -10,8 +10,8 @@ below itself. `round` sends an exact half to the even neighbour (the language's 
 total. `replace(tzinfo=...)` keeps the wall clock and moves the instant; `astimezone` keeps the
 instant, and reads a naive time as the machine's local time. Ordering a naive and an aware time
 raises `TypeError`; `==` between them is just `False`. A file whose `close` an exception skips
-stays open until the garbage collector reaches it. A quote in a value ends an SQL string
-literal. `os.path.join` drops the base when the name is absolute, and `..` climbs out of it.
+stays open as long as anything, such as the exception's traceback, still holds it. A quote in a
+value ends an SQL string literal. `os.path.join` drops the base when the name is absolute, and `..` climbs out of it.
 
 Review habit: Ask who supplied the value. A name, a path, a body or a time that came with a
 request is data until the code proves otherwise. Follow it to the SQL text, the shell string,

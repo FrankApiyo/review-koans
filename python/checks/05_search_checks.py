@@ -3,6 +3,7 @@ import subprocess
 
 from review_koans.checks import exploit, twin
 
+OPTION_ENDS = ("--", "-e", "--regexp")
 RUNNERS = (subprocess.run, subprocess.Popen, subprocess.call, subprocess.check_call, subprocess.check_output)
 
 
@@ -50,8 +51,7 @@ def argv_for(review, pattern):
     [(args, kwargs)] = spy.calls
     assert not kwargs.get("shell")
     assert isinstance(args, (list, tuple))
-    assert pattern in args
-    assert args[args.index(pattern) - 1] in ("--", "-e")
+    assert f"--regexp={pattern}" in args or (pattern in args and args[args.index(pattern) - 1] in OPTION_ENDS)
     assert args[-1] == "notes.txt"
 
 
@@ -63,7 +63,7 @@ def plain(review):
 
 
 def shell_syntax(review):
-    argv_for(review, "x; touch pwned")
+    argv_for(review, "x; echo pwned")
 
 
 def dash(review):

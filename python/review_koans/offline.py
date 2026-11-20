@@ -1,13 +1,19 @@
 import contextvars
 import ipaddress
 import socket
-from collections.abc import Callable
+import sys
+from collections.abc import Callable, Iterator
+from contextlib import AbstractContextManager, contextmanager
 from typing import Any, NoReturn
 
 import pytest
 
 _PAIRING = contextvars.ContextVar("pairing", default=False)
 _LOOPBACK_NAMES = frozenset({None, "localhost", b"localhost"})
+_GUARDING_PROCESSES = contextvars.ContextVar("guarding processes", default=False)
+_SPAWNS = frozenset(
+    {"subprocess.Popen", "os.system", "os.posix_spawn", "os.exec", "os.spawn", "os.fork", "os.forkpty"}
+)
 
 
 def _is_loopback_host(host: object) -> bool:
@@ -31,6 +37,29 @@ def _refuse(*_args: object, **_kwargs: object) -> NoReturn:
     raise RuntimeError("koans are offline")
 
 
+# An audit hook cannot be removed, so it is installed once and stays inert
+# unless the flag is set.
+def _refuse_processes(event: str, _args: tuple[object, ...]) -> None:
+    if event in _SPAWNS and _GUARDING_PROCESSES.get():
+        raise RuntimeError("koans run no commands")
+
+
+sys.addaudithook(_refuse_processes)
+
+
+@contextmanager
+def _processes(guarded: bool) -> Iterator[None]:
+    token = _GUARDING_PROCESSES.set(guarded)
+    try:
+        yield
+    finally:
+        _GUARDING_PROCESSES.reset(token)
+
+
+def allow_processes() -> AbstractContextManager[None]:
+    return _processes(False)
+
+
 def _loopback_only(lookup: Callable[..., Any]) -> Callable[..., Any]:
     def guarded(host: object, *args: object, **kwargs: object) -> Any:
         if not _is_loopback_host(host):
@@ -41,7 +70,7 @@ def _loopback_only(lookup: Callable[..., Any]) -> Callable[..., Any]:
 
 
 @pytest.fixture(autouse=True)
-def no_network(monkeypatch: pytest.MonkeyPatch) -> None:
+def no_network(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     make_pair = socket.socketpair
     connect = socket.socket.connect
     connect_ex = socket.socket.connect_ex
@@ -70,3 +99,5 @@ def no_network(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(socket, "socketpair", local_pair)
     for name in ("getaddrinfo", "gethostbyname", "gethostbyname_ex"):
         monkeypatch.setattr(socket, name, _loopback_only(getattr(socket, name)))
+    with _processes(True):
+        yield

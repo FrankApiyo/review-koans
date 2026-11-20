@@ -6,26 +6,25 @@ from review_koans.checks import exploit, twin
 USERS = [("ann", "ann@example.com"), ("O'Brien", "ob@example.com"), ("eve", "eve@example.com")]
 
 
-class Spy:
-    def __init__(self, target, sent):
-        self._target = target
-        self.sent = sent
-
+class SpyCursor(sqlite3.Cursor):
     def execute(self, sql, parameters=(), /):
-        self.sent.append((sql, parameters))
-        return self._target.execute(sql, parameters)
+        self.connection.sent.append((sql, parameters))
+        return super().execute(sql, parameters)
 
-    def cursor(self, *args, **kwargs):
-        return Spy(self._target.cursor(*args, **kwargs), self.sent)
 
-    def __getattr__(self, name):
-        return getattr(self._target, name)
+class SpyConnection(sqlite3.Connection):
+    def execute(self, sql, parameters=(), /):
+        return self.cursor().execute(sql, parameters)
+
+    def cursor(self, factory=SpyCursor):
+        return super().cursor(SpyCursor)
 
 
 def users():
-    conn = sqlite3.connect(":memory:")
-    conn.execute("CREATE TABLE users (name TEXT, email TEXT)")
+    conn = sqlite3.connect(":memory:", factory=SpyConnection)
+    conn.executescript("CREATE TABLE users (name TEXT, email TEXT)")
     conn.executemany("INSERT INTO users VALUES (?, ?)", USERS)
+    conn.sent = []
     return conn
 
 
@@ -35,11 +34,10 @@ def found(review, name):
 
 
 def sent_for(review, name):
-    sent = []
     with closing(users()) as conn:
-        review.find_email(Spy(conn, sent), name)
-    assert sent
-    return sent
+        review.find_email(conn, name)
+        assert conn.sent
+        return conn.sent
 
 
 def values(parameters):

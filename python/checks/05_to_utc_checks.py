@@ -2,6 +2,13 @@ from datetime import datetime, timedelta, timezone
 
 from review_koans.checks import exploit, raises, twin
 
+ELSEWHERE = timezone(timedelta(hours=5, minutes=30))
+
+
+class Aware(datetime):
+    def astimezone(self, tz=None):
+        return super().astimezone(ELSEWHERE if tz is None else tz)
+
 
 def converted(review, start):
     result = review.to_utc(start)
@@ -10,12 +17,12 @@ def converted(review, start):
 
 
 def in_utc(review):
-    assert converted(review, datetime(2026, 3, 1, 12, 0, tzinfo=timezone.utc)) == datetime(2026, 3, 1, 12, 0)
+    assert converted(review, Aware(2026, 3, 1, 12, 0, tzinfo=timezone.utc)) == datetime(2026, 3, 1, 12, 0)
 
 
 def other_offset(review):
-    east = datetime(2026, 3, 1, 15, 0, tzinfo=timezone(timedelta(hours=3)))
-    west = datetime(2026, 3, 1, 7, 30, tzinfo=timezone(timedelta(hours=-5)))
+    east = Aware(2026, 3, 1, 15, 0, tzinfo=timezone(timedelta(hours=3)))
+    west = Aware(2026, 3, 1, 7, 30, tzinfo=timezone(timedelta(hours=-5)))
     assert converted(review, east) == datetime(2026, 3, 1, 12, 0)
     assert converted(review, west) == datetime(2026, 3, 1, 12, 30)
 
