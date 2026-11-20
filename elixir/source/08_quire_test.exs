@@ -37,7 +37,7 @@ defmodule Koans.Ch08.QuireTest do
   alias Course.Ch08.{Note, Notebook, User}
   alias Support.Repo
 
-  koan "Ecto.Type.cast(:id, value) is how Ecto reads an id from a URL. What does it return for each value? Then an id past the 64-bit range reaches Repo.get_by: which exception module is raised?" do
+  koan "Ecto.Type.cast(:id, value) is how Ecto casts an id that arrives as a string, such as one from a URL. What does it return for each value? Then an id past the 64-bit range reaches Repo.get_by: which exception module is raised?" do
     :ok = Support.Db.reset!()
 
     assert Ecto.Type.cast(:id, "007") == _a({:ok, 7})

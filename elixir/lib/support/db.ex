@@ -15,8 +15,9 @@ defmodule Support.Db do
   """
 
   # An FTS5 table declared with content= keeps no rows of its own: DELETE FROM it is refused
-  # (contentless) or reads the content table (external content), so its index is cleared instead.
-  @fts5_content ~r/\bcontent\s*=/i
+  # (contentless) or reads the content table (external content), so its index is cleared instead,
+  # after every ordinary table, since a content table's delete trigger needs the full index.
+  @fts5_content ~r/\busing\s+fts5\b.*\bcontent\s*=/is
 
   @spec path() :: String.t()
   def path, do: Path.join(Mix.Project.build_path(), "review_koans.sqlite3")
@@ -34,18 +35,23 @@ defmodule Support.Db do
 
   defp delete_rows do
     Repo.query!("PRAGMA defer_foreign_keys = ON")
-    Enum.each(Repo.query!(@course_tables).rows, &clear/1)
+
+    Repo.query!(@course_tables).rows
+    |> Enum.sort_by(&index_only?/1)
+    |> Enum.each(&clear/1)
+
     if sequence?(), do: delete_all("sqlite_sequence")
     {:ok, :ok}
   end
 
-  defp clear([table, "virtual", sql]) do
-    if Regex.match?(@fts5_content, sql),
+  defp index_only?([_table, type, sql]),
+    do: type == "virtual" and Regex.match?(@fts5_content, sql)
+
+  defp clear([table, _type, _sql] = row) do
+    if index_only?(row),
       do: Repo.query!(~s|INSERT INTO "#{table}"("#{table}") VALUES ('delete-all')|),
       else: delete_all(table)
   end
-
-  defp clear([table, _type, _sql]), do: delete_all(table)
 
   defp delete_all(table), do: Repo.query!(~s(DELETE FROM "#{table}"))
 

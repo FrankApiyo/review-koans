@@ -30,6 +30,28 @@ defmodule Verify.SupportTest do
 
       execute "CREATE VIRTUAL TABLE verify_tokens USING fts5(word, content='')",
               "DROP TABLE verify_tokens"
+
+      create table(:verify_labels) do
+        add :label, :string, null: false
+      end
+
+      execute "CREATE VIRTUAL TABLE fts_verify_labels USING fts5(label, content='verify_labels', content_rowid='id')",
+              "DROP TABLE fts_verify_labels"
+
+      execute """
+              CREATE TRIGGER verify_labels_insert AFTER INSERT ON verify_labels BEGIN
+                INSERT INTO fts_verify_labels(rowid, label) VALUES (new.id, new.label);
+              END
+              """,
+              "DROP TRIGGER verify_labels_insert"
+
+      execute """
+              CREATE TRIGGER verify_labels_delete AFTER DELETE ON verify_labels BEGIN
+                INSERT INTO fts_verify_labels(fts_verify_labels, rowid, label)
+                VALUES ('delete', old.id, old.label);
+              END
+              """,
+              "DROP TRIGGER verify_labels_delete"
     end
   end
 
@@ -130,6 +152,7 @@ defmodule Verify.SupportTest do
   test "reset! empties an external-content FTS5 index that no trigger keeps in step" do
     owner = insert_owner!("alpha")
     Repo.query!("INSERT INTO verify_owner_index (rowid, name) VALUES (?, 'alpha')", [owner])
+    _never_indexed = insert_owner!("gamma")
 
     assert Db.reset!() == :ok
 
@@ -138,6 +161,17 @@ defmodule Verify.SupportTest do
 
     assert matches("verify_owner_index", "alpha") == []
     assert matches("verify_owner_index", "beta") == [[1]]
+  end
+
+  test "reset! empties a trigger-kept FTS5 index whose name sorts before its content table" do
+    _ = insert!("verify_labels (label) VALUES (?)", ["alpha"])
+
+    assert Db.reset!() == :ok
+
+    assert insert!("verify_labels (label) VALUES (?)", ["beta"]) == 1
+    assert matches("fts_verify_labels", "alpha") == []
+    assert matches("fts_verify_labels", "beta") == [[1]]
+    Repo.query!("INSERT INTO fts_verify_labels(fts_verify_labels) VALUES ('integrity-check')")
   end
 
   test "reset! empties a contentless FTS5 table" do

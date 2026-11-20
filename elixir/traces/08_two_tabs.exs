@@ -40,16 +40,18 @@ defmodule NotebookLive do
 
   def render(assigns), do: ~H"<ul>{items(@notes)}</ul>"
 
-  # One string, not a :for over the notes, so the report's template fingerprint is the same on
-  # every run. The titles are fixed in this file, never typed by a user.
+  # One escaped string, not a :for over the notes, so the report's template fingerprint is the
+  # same on every run.
   defp items(notes) do
     Phoenix.HTML.raw(
       for note <- notes do
-        ~s(<li id="note-#{note.id}">#{note.title} ) <>
+        ~s(<li id="note-#{note.id}">#{escape(note.title)} ) <>
           ~s(<button phx-click="delete" phx-value-id="#{note.id}">delete</button></li>)
       end
     )
   end
+
+  defp escape(text), do: text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 end
 
 # The logger can print a report after the script has exited. This handler prints each report

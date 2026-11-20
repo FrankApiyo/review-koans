@@ -15,6 +15,18 @@ defmodule Checks.Ch08.Tags do
          assert {:ok, {{:ok, %Note{}}, tags}} = Hidden.isolated(&fresh/0)
          assert [{"home", 1}, {"work", 1}] = tags
        end},
+      {:twin, "a tag the user has but did not name is not set on the note",
+       fn ->
+         :ok = Support.Db.reset!()
+         assert {:ok, {{:ok, %Note{}}, tags}} = Hidden.isolated(&unnamed/0)
+         assert [{"home", 1}, {"work", 1}] = tags
+       end},
+      {:exploit, "another user's tag of the same name is set on the note",
+       fn ->
+         :ok = Support.Db.reset!()
+         assert {:ok, {{:ok, %Note{}}, tags}} = Hidden.isolated(&existing/0)
+         assert [1] = tags |> Enum.map(&elem(&1, 1)) |> Enum.uniq()
+       end},
       {:exploit, "a tag the user already has is dropped from the note",
        fn ->
          :ok = Support.Db.reset!()
@@ -27,6 +39,15 @@ defmodule Checks.Ch08.Tags do
   # Ada is user 1. Bob, user 2, already has a tag named "work".
   defp fresh do
     {ada, notebook} = seed()
+    note = Db.note!(notebook, "one")
+    result = Tags.set_note_tags(ada, note, ["work", "home"])
+    {result, Db.stored_tags(note)}
+  end
+
+  # Ada already has "misc", which this note is not given.
+  defp unnamed do
+    {ada, notebook} = seed()
+    Db.tag!(ada, "misc")
     note = Db.note!(notebook, "one")
     result = Tags.set_note_tags(ada, note, ["work", "home"])
     {result, Db.stored_tags(note)}
