@@ -34,6 +34,7 @@ class _Run:
         self.folder: Path | None = None
         self.finished: list[_Finished] = []
         self.failures: list[_Failed] = []
+        self.collection_errors: list[_Finished] = []
 
     @property
     def passed(self) -> int:
@@ -119,10 +120,35 @@ def pytest_runtest_makereport(
     if not _is_koan(item) or not isinstance(item, pytest.Function):
         return report
     run = item.config.stash[_run_key]
-    if call.excinfo is not None and call.when in ("setup", "call"):
+    if report.failed and call.excinfo is not None and call.when in ("setup", "call"):
         _record_failure(run, item, report, call.excinfo)
     elif call.when == "call" and report.passed:
         run.finished.append(_Finished("ok", _relative(item, item.path), item.location[1] + 1))
+    return report
+
+
+def _collection_error_line(path: Path, longrepr: str) -> int:
+    try:
+        compile(path.read_bytes(), str(path), "exec")
+    except SyntaxError as error:
+        return error.lineno or 0
+    except OSError:
+        return 0
+    lines = re.findall(rf"^\S*{re.escape(path.name)}:(\d+): in ", longrepr, re.MULTILINE)
+    return int(lines[-1]) if lines else 0
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_make_collect_report(
+    collector: pytest.Collector,
+) -> Generator[None, pytest.CollectReport, pytest.CollectReport]:
+    report = yield
+    path = collector.path
+    if report.failed and isinstance(collector, pytest.Module) and _KOAN_FILE.match(path.name):
+        relative = Path(os.path.relpath(path, collector.config.invocation_params.dir)).as_posix()
+        line = _collection_error_line(path, str(report.longrepr))
+        error = _Finished("CollectionError", relative, line)
+        collector.config.stash[_run_key].collection_errors.append(error)
     return report
 
 
@@ -134,18 +160,32 @@ def _earliest(run: _Run) -> _Failed | None:
 
 def pytest_terminal_summary(terminalreporter: pytest.TerminalReporter, config: pytest.Config) -> None:
     run = config.stash[_run_key]
-    if run.folder is None:
-        return
     earliest = _earliest(run)
+    if run.folder is not None:
+        _write_footer(terminalreporter, run, run.folder, earliest)
+    if _verify() and (run.folder is not None or run.collection_errors):
+        _write_verify_lines(terminalreporter, run, earliest)
+
+
+def _write_footer(
+    terminalreporter: pytest.TerminalReporter, run: _Run, folder: Path, earliest: _Failed | None
+) -> None:
     text = footer.render(
-        run.passed, footer.total(run.folder), len(run.finished), earliest.failure if earliest else None
+        run.passed, footer.total(folder), len(run.finished), earliest.failure if earliest else None
     )
     if text:
         terminalreporter.write_line("")
         for line in text.split("\n"):
             terminalreporter.write_line(line)
-    if _verify():
-        _write_verify_lines(terminalreporter, run, earliest)
+
+
+def _result_line(run: _Run, earliest: _Failed | None) -> str:
+    if run.collection_errors:
+        first = min(run.collection_errors, key=lambda error: (error.path, error.line))
+        return f"KOANS-RESULT {first.kind} {first.path}:{first.line}"
+    if earliest is None:
+        return "KOANS-RESULT ok"
+    return f"KOANS-RESULT {earliest.finished.kind} {earliest.failure.path}:{earliest.failure.line}"
 
 
 def _write_verify_lines(
@@ -153,9 +193,4 @@ def _write_verify_lines(
 ) -> None:
     for done in sorted(run.finished, key=lambda done: (done.path, done.line)):
         terminalreporter.write_line(f"KOANS-TEST {done.kind} {done.path}:{done.line}")
-    if earliest is None:
-        terminalreporter.write_line("KOANS-RESULT ok")
-    else:
-        terminalreporter.write_line(
-            f"KOANS-RESULT {earliest.finished.kind} {earliest.failure.path}:{earliest.failure.line}"
-        )
+    terminalreporter.write_line(_result_line(run, earliest))

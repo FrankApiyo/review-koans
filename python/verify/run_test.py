@@ -92,3 +92,32 @@ def test_no_pycache_is_written_under_koans():
     done = run_pytest("verify/fixtures/solved")
     assert done.returncode == 0
     assert compiled() == []
+
+
+def test_a_skipped_or_expected_failure_koan_is_not_a_failure():
+    done = run_pytest("verify/fixtures/skips", verify=True)
+    skips = "verify/fixtures/skips/01_skips_test.py"
+    lines = [line for line in done.stdout.splitlines() if line.startswith("KOANS-")]
+    assert lines == [f"KOANS-TEST ok {skips}:4", "KOANS-RESULT ok"]
+    assert MASTER not in done.stdout
+
+
+def test_a_blank_in_a_helper_fails_on_the_helper_line():
+    helper = "verify/fixtures/helper/01_helper_test.py"
+    done = run_pytest("verify/fixtures/helper", verify=True)
+    assert f"KOANS-RESULT Blank {helper}:5" in done.stdout
+    assert f"Meditate on {helper}:5\n" in done.stdout
+
+
+def test_verify_mode_reports_a_syntax_error_as_a_collection_error():
+    done = run_pytest("verify/fixtures/syntax_error", verify=True)
+    assert done.returncode != 0
+    assert "KOANS-RESULT CollectionError verify/fixtures/syntax_error/01_broken_test.py:6" in done.stdout
+    assert "KOANS-RESULT ok" not in done.stdout
+
+
+def test_verify_mode_reports_a_failed_import_as_a_collection_error():
+    done = run_pytest("verify/fixtures/import_error", verify=True)
+    assert done.returncode != 0
+    assert "KOANS-RESULT CollectionError verify/fixtures/import_error/01_missing_test.py:3" in done.stdout
+    assert "KOANS-RESULT ok" not in done.stdout
