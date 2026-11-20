@@ -60,7 +60,9 @@ def _checks_path(koan_file: str, stem: str) -> Path:
         candidate = folder / "checks" / f"{stem}_checks.py"
         if candidate.is_file():
             return candidate
-    raise FileNotFoundError(f"no checks/{stem}_checks.py at or above {start}")
+        if (folder / "conftest.py").is_file():
+            break
+    raise FileNotFoundError(f"no checks/{stem}_checks.py between {start} and the track root")
 
 
 def load_checks(koan_file: str, stem: str) -> ModuleType:
@@ -116,10 +118,12 @@ def _cause(koan_file: str, stem: str, case: Case) -> object:
 def run_checks(koan_file: str, stem: str) -> None:
     __tracebackhide__ = True
     path = review_path(koan_file, f"{stem}.py")
-    try:
-        load_review(koan_file, stem)
-    except (Exception, SystemExit) as error:
-        raise ReviewDidNotLoad(path, error) from None
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        try:
+            load_review(koan_file, stem)
+        except (Exception, SystemExit) as error:
+            raise ReviewDidNotLoad(path, error) from None
     for case in load_checks(koan_file, stem).CASES:
         cause = _cause(koan_file, stem, case)
         if cause is not _PASSED:

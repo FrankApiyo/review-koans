@@ -3,6 +3,7 @@ import asyncio
 import pytest
 
 from review_koans.checks import raises, settle
+from review_koans.hidden import load_checks
 from verify.child import MASTER, run_pytest
 
 FIX = "Fix the bug in {review} in place. The hidden checks name what still fails."
@@ -93,6 +94,48 @@ def test_a_review_that_does_not_load_names_the_file_to_fix():
         f"\n{MASTER}\nWrite:        {review}\nExercised by: {koan}:6\n" in done.stdout
     )
     _assert_kind(done.stdout, "hidden_syntax", "ReviewDidNotLoad")
+
+
+def test_a_review_that_fails_to_import_names_the_file_to_fix():
+    done = _run("hidden_import_error")
+    _, review = _paths("hidden_import_error")
+    message = f"{review} does not load: ModuleNotFoundError: No module named 'warehouse_client'"
+    assert _footer("hidden_import_error", message) in done.stdout
+    _assert_kind(done.stdout, "hidden_import_error", "ReviewDidNotLoad")
+
+
+def test_a_syntax_warning_in_the_review_does_not_reach_the_output():
+    done = _run("hidden_syntax_warning")
+    assert done.returncode == 0
+    assert "SyntaxWarning" not in done.stdout + done.stderr
+    assert "warnings summary" not in done.stdout
+
+
+def test_leftover_tasks_are_cancelled_when_a_case_ends():
+    done = _run("hidden_leftover_cancelled")
+    assert done.returncode == 0
+    koan, _ = _paths("hidden_leftover_cancelled")
+    assert f"KOANS-TEST ok {koan}:4" in done.stdout
+
+
+def test_checks_are_found_above_the_koans_folder():
+    koan = "verify/fixtures/hidden_nested/v0001/01_cart_test.py"
+    done = run_pytest(koan, verify=True)
+    assert done.returncode == 0
+    assert f"KOANS-TEST ok {koan}:4" in done.stdout
+
+
+def test_the_checks_search_stops_at_the_track_root(tmp_path):
+    (tmp_path / "checks").mkdir()
+    (tmp_path / "checks" / "01_cart_checks.py").write_text("CASES = []\n")
+    track = tmp_path / "track"
+    (track / "koans").mkdir(parents=True)
+    (track / "conftest.py").write_text("")
+    with pytest.raises(FileNotFoundError):
+        load_checks(str(track / "koans" / "01_cart_test.py"), "01_cart")
+    (track / "checks").mkdir()
+    (track / "checks" / "01_cart_checks.py").write_text("CASES = []\n")
+    assert load_checks(str(track / "koans" / "01_cart_test.py"), "01_cart").CASES == []
 
 
 def test_each_case_gets_a_fresh_module():
