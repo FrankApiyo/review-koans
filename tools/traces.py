@@ -93,7 +93,7 @@ def run(track: str, program: Path) -> str:
 
 
 def needs_deps(program: Path) -> bool:
-    with program.open() as source:
+    with program.open(encoding="utf-8") as source:
         return source.readline().strip() == NEEDS_DEPS
 
 
@@ -157,7 +157,7 @@ def capture(track: str, programs: list[Path]) -> int:
             print(f"refused {program.name}: {reason} in the output", file=sys.stderr)
             refused += 1
         else:
-            fixture_for(program).write_text(output)
+            fixture_for(program).write_text(output, encoding="utf-8")
     return 1 if refused else 0
 
 
@@ -166,7 +166,7 @@ def check(track: str, programs: list[Path]) -> int:
     stale = [
         p.name
         for p in programs
-        if fixture_for(p).is_file() and mask(run(track, p)) != mask(fixture_for(p).read_text())
+        if fixture_for(p).is_file() and mask(run(track, p)) != mask(fixture_for(p).read_text(encoding="utf-8"))
     ]
     problems = {"stale": stale, "missing": missing, "orphan": orphans_in(track)}
     for label, names in problems.items():

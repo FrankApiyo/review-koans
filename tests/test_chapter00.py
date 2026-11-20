@@ -24,6 +24,13 @@ DEFMODULE = re.compile(r"^defmodule (?P<name>[\w.]+) do$", re.M)
 LABELS = re.compile(r'\{:(?P<kind>exploit|twin), "(?P<label>[^"]+)"')
 
 
+def whole_track_koans() -> int:
+    return sum(
+        len(re.findall(r'^  koan "', f.read_text(encoding="utf-8"), re.M))
+        for f in KOANS.glob("[0-9][0-9]_*_test.exs")
+    )
+
+
 def line_of(number: int) -> str:
     return TEXT.splitlines()[number - 1]
 
@@ -51,7 +58,7 @@ def test_the_hidden_case_footer_names_the_fix_koan_and_its_review():
     assert re.fullmatch(rf"\s*run_checks\([\w.]+, {re.escape(module)}\)", line_of(line))
     assert meditation(TEXT, koan) == quoted["meditation"].strip()
     assert int(quoted["passed"]) == koan_lines(TEXT).index(koan)
-    assert int(quoted["total"]) == len(koan_lines(TEXT))
+    assert int(quoted["total"]) == whole_track_koans()
 
 
 def test_the_quoted_label_is_the_first_exploit_of_its_checks():

@@ -20,7 +20,7 @@ defmodule Koans.Ch00.HowReviewKoansWorkTest do
       Write:        koans/review/00_discount.ex
       Exercised by: koans/00_how_review_koans_work_test.exs:42
           Fix the bug in koans/review/00_discount.ex in place. The hidden checks name what still fails.
-      2 of 5 koans answered.
+      2 of 128 koans answered.
 
   The checks are readable in `checks/`, as the answers are in `solutions/`. Read them only after
   a real attempt; reading them first defeats the exercise.

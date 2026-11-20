@@ -30,7 +30,7 @@ body { background: var(--bg); color: var(--fg); font: 17px/1.55 system-ui, sans-
 main { max-width: 46rem; margin: 0 auto; padding: 1.5rem 16px 4rem; }
 h1 { font-size: 1.8rem; }
 h2 { font-size: 1.3rem; margin-top: 2.5rem; border-bottom: 1px solid var(--rule); }
-h2 small { color: var(--muted); margin-right: 0.6rem; font-weight: 400; }
+h3 small { color: var(--muted); margin-right: 0.6rem; font-weight: 400; }
 a { color: var(--accent); overflow-wrap: anywhere; }
 code, pre { background: var(--code-bg); border-radius: 4px; font-size: 0.9em; }
 code { padding: 0.05em 0.3em; overflow-wrap: anywhere; }
@@ -63,7 +63,7 @@ footer { color: var(--muted); margin-top: 3rem; font-size: 0.9rem; }
 Write:        koans/review/00_discount.ex
 Exercised by: koans/00_how_review_koans_work_test.exs:42
     Fix the bug in koans/review/00_discount.ex in place. The hidden checks name what still fails.
-2 of 5 koans answered.</code></pre>
+2 of 128 koans answered.</code></pre>
 <p>The checks are readable in <code>checks/</code>, as the answers are in <code>solutions/</code>. Read them only after a real attempt; reading them first defeats the exercise.</p>
 <p>A compile error stops the run before any footer: fix what the compiler names, then run <code>mix test</code> again. To start again, run <code>git checkout -- koans/</code>.</p>
 </article>
@@ -110,10 +110,10 @@ Exercised by: koans/00_how_review_koans_work_test.exs:42
 
 <article id="elixir-05">
 <h3><small>05</small>ETS</h3>
-<p>Look for: a <code>lookup</code> or <code>member</code> check followed by a separate write; a table written by processes other than its owner while it is <code>:protected</code>; a table created by whichever process calls first; and a match spec's guard at a boundary, or a <code>select_delete</code> whose body is not <code>true</code>.</p>
+<p>Look for: a <code>lookup</code> or <code>member</code> check followed by a separate write; a table written by processes other than its owner while it is <code>:protected</code>; a table created by whichever process calls first; a match spec's guard at a boundary; a <code>select_delete</code> body not <code>true</code>.</p>
 <p>Why it bites: two workers both see a job as free, and both process it. A rate limiter raises <code>ArgumentError</code> on every request from its first deploy. Feature flags vanish when the request that happened to create their table ends.</p>
 <p>Review habit: Ask what happens with two at once. OTP documents each update of a single object as atomic and isolated, but nothing holds between two calls: another process can write in the gap. <code>insert_new</code> writes only if the key is absent, and <code>update_counter</code> adds in place, so put the decision in the call that writes. A table belongs to the process that created it and is deleted when that process dies, unless it has an <code>:heir</code>; OTP's docs do not say whether that happens before or after the owner's <code>:DOWN</code>. <code>:protected</code>, the default, lets any process read and only the owner write; <code>:public</code> lets any process write; <code>:private</code> keeps both to the owner. <code>read_concurrency</code> and <code>write_concurrency</code> are performance tuning: they change neither access nor atomicity. A <code>:set</code> keeps one object per key, a <code>:bag</code> each distinct object, a <code>:duplicate_bag</code> every copy, and an <code>:ordered_set</code> walks its keys in term order. <code>select_delete</code> deletes only the rows for which the match spec returns <code>true</code>.</p>
-<p class="mistake"><strong>A common mistake:</strong> keeping a <code>lookup</code> or <code>member</code> check in front of the write. Two callers both pass it before either writes. Let the write decide alone: <code>insert_new</code> and its result, <code>update_counter</code> with a default row, or one call in which the owner checks and writes. Create a shared table in the <code>init</code> of a supervised process, never on first use.</p>
+<p class="mistake"><strong>A common mistake:</strong> acting on a <code>lookup</code> or <code>member</code> check in front of the write. Two callers both pass it before either writes. Let the write decide alone: <code>insert_new</code> and its result, <code>update_counter</code> with a default row, or one call in which the owner checks and writes. The course asks for one atomic <code>insert_new</code> and no read before it, as its own choice: a <code>member</code> check ahead of an <code>insert_new</code> you honour is no race, only redundant. Create a shared table in the <code>init</code> of a supervised process, never on first use.</p>
 <p class="more">Read more</p>
 <ul class="links"><li><a href="https://www.erlang.org/doc/apps/stdlib/ets.html">https://www.erlang.org/doc/apps/stdlib/ets.html</a></li><li><a href="https://www.erlang.org/doc/apps/erts/match_spec.html">https://www.erlang.org/doc/apps/erts/match_spec.html</a></li></ul>
 </article>

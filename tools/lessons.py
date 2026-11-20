@@ -57,7 +57,7 @@ body { background: var(--bg); color: var(--fg); font: 17px/1.55 system-ui, sans-
 main { max-width: 46rem; margin: 0 auto; padding: 1.5rem 16px 4rem; }
 h1 { font-size: 1.8rem; }
 h2 { font-size: 1.3rem; margin-top: 2.5rem; border-bottom: 1px solid var(--rule); }
-h2 small { color: var(--muted); margin-right: 0.6rem; font-weight: 400; }
+h3 small { color: var(--muted); margin-right: 0.6rem; font-weight: 400; }
 a { color: var(--accent); overflow-wrap: anywhere; }
 code, pre { background: var(--code-bg); border-radius: 4px; font-size: 0.9em; }
 code { padding: 0.05em 0.3em; overflow-wrap: anywhere; }
