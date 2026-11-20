@@ -104,7 +104,7 @@ def test_lessons_page_is_current():
 
 def test_page_has_no_pictures_or_scripts():
     page = PAGE.read_text(encoding="utf-8").lower()
-    assert [tag for tag in ("<img", "<svg", "<script") if tag in page] == []
+    assert [tag for tag in ("<img", "<svg", "<script", "<link", "@import") if tag in page] == []
 
 
 def test_every_read_more_link_is_an_anchor():
@@ -119,8 +119,74 @@ def test_every_read_more_link_is_an_anchor():
     assert linked and linked <= anchors
 
 
+def tokens_missing_from_dark(page: str) -> list[str]:
+    light = re.search(r":root \{(.*?)\}", page, re.DOTALL).group(1)
+    dark = re.search(r"prefers-color-scheme: dark\) \{\s*:root \{(.*?)\}", page, re.DOTALL)
+    defined = set(re.findall(r"(--[\w-]+):", dark.group(1) if dark else ""))
+    return [token for token in re.findall(r"(--[\w-]+):", light) if token not in defined]
+
+
 def test_page_has_light_and_dark_colours():
     page = PAGE.read_text(encoding="utf-8")
     assert "color-scheme: light dark" in page
-    assert "prefers-color-scheme: dark" in page
-    assert "<link" not in page
+    assert "--bg:" in page
+    assert tokens_missing_from_dark(page) == []
+
+
+def test_dark_check_catches_a_missing_dark_token():
+    page = PAGE.read_text(encoding="utf-8")
+    assert tokens_missing_from_dark(page.replace("    --bg: #15171b;\n", "")) == ["--bg"]
+
+
+def test_page_declares_language_title_and_viewport():
+    page = PAGE.read_text(encoding="utf-8")
+    assert '<html lang="en">' in page
+    assert re.search(r"<title>[^<]+</title>", page)
+    assert '<meta name="viewport" content="width=device-width, initial-scale=1">' in page
+
+
+def test_inline_escapes_html_and_sets_code():
+    import lessons
+
+    assert lessons.inline("a<b & c>d") == "a&lt;b &amp; c&gt;d"
+    assert lessons.inline("set x=1 now") == "set <code>x=1</code> now"
+    assert (
+        lessons.inline('see `%{"id" => "2"}` here')
+        == 'see <code>%{"id" =&gt; "2"}</code> here'
+    )
+
+
+def test_articles_follow_chapter_order_with_readable_titles():
+    import lessons
+
+    page = PAGE.read_text(encoding="utf-8")
+    chapters = [path.name[:2] for path in sorted((ROOT / "elixir" / "source").glob("*_test.exs"))]
+    assert re.findall(r'<article id="elixir-(\d\d)">', page) == chapters
+    titles = re.findall(r"<h3><small>\d\d</small>([^<]+)</h3>", page)
+    assert titles[1] == "Processes and mailboxes"
+    assert titles == [lessons.TITLES[name] for _, name, _ in lessons.chapters(ROOT, "elixir")]
+
+
+def test_chapter_without_lesson_is_an_error(tmp_path):
+    import lessons
+
+    source = tmp_path / "elixir" / "source"
+    source.mkdir(parents=True)
+    (source / "01_processes_and_mailboxes_test.exs").write_text("defmodule X do\nend\n")
+    with pytest.raises(ValueError, match="no lesson"):
+        lessons.chapters(tmp_path, "elixir")
+
+
+def test_chapter_without_display_title_is_an_error():
+    import lessons
+
+    with pytest.raises(KeyError):
+        lessons.title_for("unmapped chapter")
+
+
+def test_read_more_inside_prose_does_not_split_the_lesson():
+    import lessons
+
+    html = lessons.section_html("elixir", "01", "ets", "Intro says Read more: later.\n\nRead more: https://a.example/x")
+    assert "Intro says Read more: later." in html
+    assert '<a href="https://a.example/x">' in html

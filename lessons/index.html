@@ -52,7 +52,7 @@ footer { color: var(--muted); margin-top: 3rem; font-size: 0.9rem; }
 <section id="elixir">
 <h2>Elixir</h2>
 <article id="elixir-00">
-<h3><small>00</small>how review koans work</h3>
+<h3><small>00</small>How review koans work</h3>
 <p>Review koans come in three kinds, and each one fails until you answer it.</p>
 <ul><li>Predict: replace <code>__</code> with the value that makes the assertion true.</li><li>Review: read the module in <code>koans/review/</code>, then replace the <code>__</code> in its verdict with <code>:fine</code>, or with the number of the line that holds the bug. About one review in five is fine. After a bug, the next koan has you fix it in place, and hidden checks run your fix.</li><li>Trace: read a real crash captured in <code>traces/</code>, and name its cause and where it came from.</li></ul>
 <p><code>mix test</code> stops at the first koan that fails, and its footer says where to work. A blank:</p>
@@ -69,7 +69,7 @@ Exercised by: koans/00_how_review_koans_work_test.exs:42
 </article>
 
 <article id="elixir-01">
-<h3><small>01</small>processes and mailboxes</h3>
+<h3><small>01</small>Processes and mailboxes</h3>
 <p>Look for: a <code>receive</code> that can take a message meant for another request (no ref, or a ref left unpinned); a <code>receive</code> with no way out when the other process dies; a loop that leaves unknown messages in its mailbox; and <code>self()</code> called inside the function a new process runs.</p>
 <p>Why it bites: a late reply answers the next request, so one customer sees another's price. A mailbox nothing drains grows until the node runs out of memory. A worker that crashes before it replies leaves its caller waiting forever. Spawning and then monitoring races: a worker that dies first leaves only <code>:noproc</code>, so <code>spawn_monitor</code> sets the monitor as it spawns.</p>
 <p>Review habit: Name the other process. For each <code>send</code>, say who receives it and what happens if that process is dead, slow or never answers. For each <code>receive</code>, say who sends what it matches, and what else could be in the mailbox when it runs. Messages from one process arrive in the order it sent them; that is the only ordering the runtime promises, so a result sent just before its sender exits always arrives before the <code>:DOWN</code>.</p>
@@ -79,7 +79,7 @@ Exercised by: koans/00_how_review_koans_work_test.exs:42
 </article>
 
 <article id="elixir-02">
-<h3><small>02</small>links monitors and exits</h3>
+<h3><small>02</small>Links, monitors and exits</h3>
 <p>Look for: <code>spawn_link</code> or <code>Task.async</code> where the caller must outlive the work; a process that traps exits but has no clause for <code>{:EXIT, pid, :normal}</code>; a monitor still held once the answer came; and <code>Process.exit(pid, :normal)</code> used to stop a process.</p>
 <p>Why it bites: one bad email address takes the notifier down, and every in-flight notification goes with it. A long-lived client that never removes its monitors holds one more for every request, and each server that dies leaves a <code>:DOWN</code> that nothing reads.</p>
 <p>Review habit: Ask what happens on crash. For each process a line starts or watches, say what reaches the other side when it ends, normally or not. The runtime's rules: a link carries an exit signal both ways, and a process that does not trap exits dies of any reason except <code>:normal</code>. Trapping turns the signal into an <code>{:EXIT, pid, reason}</code> message, <code>:normal</code> included. <code>Process.exit(pid, :kill)</code> cannot be trapped, and links and monitors see the reason <code>:killed</code>. A monitor is one-way and delivers one <code>:DOWN</code> message. Linking a <code>Task.async</code> to its caller is Elixir's choice; <code>Task.Supervisor.async_nolink</code> monitors the task without the link.</p>
@@ -89,7 +89,7 @@ Exercised by: koans/00_how_review_koans_work_test.exs:42
 </article>
 
 <article id="elixir-03">
-<h3><small>03</small>genserver calls and timeouts</h3>
+<h3><small>03</small>GenServer calls and timeouts</h3>
 <p>Look for: a decision made in the caller on a value an earlier call returned; slow work inside a callback; replies deferred with <code>{:noreply, ...}</code> that are lost or kept after use; <code>from</code> used as a key; a <code>Process.monitor</code> with no <code>:DOWN</code> clause; and a server that calls itself, or calls a server that calls it back.</p>
 <p>Why it bites: two customers both read the last unit and both buy it. One slow refresh holds the server, so every caller queues behind it until its call times out. A registry that monitors clients but never handles <code>:DOWN</code> grows with every client that ends.</p>
 <p>Review habit: Ask what happens with two at once. A server runs one callback at a time, so a check and the act that depends on it are safe together only inside one callback; between two calls, another caller's request can run. For each callback, ask who else waits while it runs. A <code>from</code> kept for <code>GenServer.reply/2</code> is answered once, then dropped. <code>from</code> holds the caller's pid and a tag that is new on every call; the tag's shape is OTP's internal, so key by the pid. A monitor delivers one <code>:DOWN</code>, and a clause has to handle it. <code>{:continue, ...}</code> returned from <code>init</code> runs before the server takes any message.</p>
@@ -99,7 +99,7 @@ Exercised by: koans/00_how_review_koans_work_test.exs:42
 </article>
 
 <article id="elixir-04">
-<h3><small>04</small>supervision and restarts</h3>
+<h3><small>04</small>Supervision and restarts</h3>
 <p>Look for: a child listed before a sibling its <code>init</code> calls; a sibling's pid kept from <code>init</code> under a strategy that restarts the sibling alone; the default <code>:permanent</code> on work that runs once; an <code>init</code> that crashes when a call in it fails; and code that expects a restarted process to keep its state.</p>
 <p>Why it bites: while the database is down the app will not boot, health check included. After a producer restarts, every event goes to a dead pid. A finished warm-up job is restarted until its supervisor gives up, which the one above restarts if <code>:permanent</code>.</p>
 <p>Review habit: Read for what is missing: a <code>restart:</code> option, an <code>{:error, _}</code> branch, a sibling that has to start first. In a trace, start from the first app frame. OTP documents these rules. A supervisor starts its children in list order, one start returning before the next begins, and stops them in reverse. A restarted child starts again from <code>init</code>. <code>:permanent</code> restarts on any exit, <code>:transient</code> only on a reason other than <code>:normal</code>, <code>:shutdown</code> or <code>{:shutdown, _}</code>, and <code>:temporary</code> never. When a child is to be restarted, <code>:one_for_one</code> restarts only it, <code>:rest_for_one</code> also the children after it, and <code>:one_for_all</code> every child. After more than <code>max_restarts</code> restarts in <code>max_seconds</code>, the supervisor stops its children and exits with <code>:shutdown</code>; Elixir's <code>Supervisor</code> defaults to 3 in 5 seconds, Erlang's <code>supervisor</code> to 1 in 5. A crash in <code>init</code> fails the child's start, so the tree does not boot; a crash in <code>handle_continue</code> comes after the start returned.</p>
@@ -109,7 +109,7 @@ Exercised by: koans/00_how_review_koans_work_test.exs:42
 </article>
 
 <article id="elixir-05">
-<h3><small>05</small>ets</h3>
+<h3><small>05</small>ETS</h3>
 <p>Look for: a <code>lookup</code> or <code>member</code> check followed by a separate write; a table written by processes other than its owner while it is <code>:protected</code>; a table created by whichever process calls first; and a match spec's guard at a boundary, or a <code>select_delete</code> whose body is not <code>true</code>.</p>
 <p>Why it bites: two workers both see a job as free, and both process it. A rate limiter raises <code>ArgumentError</code> on every request from its first deploy. Feature flags vanish when the request that happened to create their table ends.</p>
 <p>Review habit: Ask what happens with two at once. OTP documents each update of a single object as atomic and isolated, but nothing holds between two calls: another process can write in the gap. <code>insert_new</code> writes only if the key is absent, and <code>update_counter</code> adds in place, so put the decision in the call that writes. A table belongs to the process that created it and is deleted when that process dies, unless it has an <code>:heir</code>; OTP's docs do not say whether that happens before or after the owner's <code>:DOWN</code>. <code>:protected</code>, the default, lets any process read and only the owner write; <code>:public</code> lets any process write; <code>:private</code> keeps both to the owner. <code>read_concurrency</code> and <code>write_concurrency</code> are performance tuning: they change neither access nor atomicity. A <code>:set</code> keeps one object per key, a <code>:bag</code> each distinct object, a <code>:duplicate_bag</code> every copy, and an <code>:ordered_set</code> walks its keys in term order. <code>select_delete</code> deletes only the rows for which the match spec returns <code>true</code>.</p>
@@ -119,7 +119,7 @@ Exercised by: koans/00_how_review_koans_work_test.exs:42
 </article>
 
 <article id="elixir-06">
-<h3><small>06</small>ecto queries and transactions</h3>
+<h3><small>06</small>Ecto queries and transactions</h3>
 <p>Look for: a <code>get!</code> or query that takes an id but not the signed-in user; a <code>cast</code> that permits <code>user_id</code>; SQL built by interpolating a string; a notification sent inside <code>Repo.transact</code>; <code>Repo.preload</code> called once per row; and a count written back from a struct loaded earlier.</p>
 <p>Why it bites: anyone who edits the id in a URL reads someone else's post. A "welcome" email goes out for a signup that rolled back. A profile page runs 501 queries. Two tabs count one view.</p>
 <p>Review habit: Ask who supplied the value. Ids, form params and search text come from the client. Scope the query by the session's user, so "not yours" raises the same <code>Ecto.NoResultsError</code> as "not there" (<code>get!</code>, <code>get_by!</code> and <code>one!</code> raise it; <code>get</code> and <code>one</code> return <code>nil</code>), and <code>cast</code> only the fields a user may set. Pass values as parameters: Ecto sends each <code>^</code> value apart from the SQL text, <code>Repo.query!/2</code> takes <code>?</code> on SQLite and <code>$1</code> on Postgres, and Ecto rejects an interpolated string as <code>fragment</code>'s SQL at compile time. <code>Repo.transact/2</code>, Ecto's choice since 3.13, commits on <code>{:ok, _}</code> and rolls back on <code>{:error, _}</code>; the soft-deprecated <code>transaction/2</code> commits whatever the function returns. A Multi checks the changesets it was given before the transaction starts. <code>update_all</code> and <code>insert_all</code> take no changeset and fill no timestamps, so a NOT NULL timestamp fails with the driver's error (<code>Exqlite.Error</code> here, <code>Postgrex.Error</code> on Postgres); <code>update_all</code> with <code>inc:</code> is one <code>UPDATE</code>. A unique index raises <code>Ecto.ConstraintError</code> unless the changeset declares <code>unique_constraint/3</code> under the index's name: Postgres reports that name, while <code>ecto_sqlite3</code> builds it from the table and columns SQLite reports.</p>
@@ -129,7 +129,7 @@ Exercised by: koans/00_how_review_koans_work_test.exs:42
 </article>
 
 <article id="elixir-07">
-<h3><small>07</small>liveview</h3>
+<h3><small>07</small>LiveView</h3>
 <p>Look for: a <code>handle_event</code> that acts on an id without asking whose it is; a <code>phx-value-*</code> compared with an integer; <code>String.to_atom</code> on anything a client sent; one PubSub topic for every user's private items; and URL state read in <code>mount</code> but not in <code>handle_params</code>.</p>
 <p>Why it bites: a client can send any event with any value, as <code>render_click/3</code> does here, so hiding a button guards nothing. Someone deletes another user's note; a pick never shows, because <code>"2" == 2</code> is false; the node stops when its atom table fills, since atoms are never garbage collected; a private item appears in someone else's feed.</p>
 <p>Review habit: Ask who supplied the value. Params, <code>phx-value-*</code> values and the URL come from the client; a <code>phx-value-*</code> attribute is text, so it arrives as a string. LiveView documents that <code>mount/3</code> runs twice, for the plain HTTP render and again once the socket connects (<code>connected?/1</code> tells them apart), that a routed view's <code>handle_params/3</code> runs after <code>mount</code> and on every patch, and that <code>push_patch</code> keeps the process, <code>push_navigate</code> mounts a new one and <code>redirect</code> reloads the page. So authorise in the handler against the session's user, and answer "not yours" as you answer "not there"; map column names through an allow-list; read URL state in <code>handle_params</code>; broadcast private data on a per-user topic, since PubSub delivers every message on a topic to each subscriber. A forged or malformed value may stop the forger's own view, so this course accepts <code>String.to_integer</code>, <code>String.to_existing_atom</code> and guards with no fallback clause; it asks that no other user's data is shown or changed and no atom is made. A LiveView with no <code>handle_info/2</code> logs a stray message at debug level and carries on: that is LiveView's choice. A <code>handle_info</code> with no catch-all crashes on it.</p>
@@ -139,7 +139,7 @@ Exercised by: koans/00_how_review_koans_work_test.exs:42
 </article>
 
 <article id="elixir-08">
-<h3><small>08</small>quire</h3>
+<h3><small>08</small>Quire</h3>
 <p>Look for: what each function leaves out. The code is shaped like Quire, the notes app from the phoenix-koans course: an id used without <code>Id.cast</code>, search text sent to FTS5 as typed, a page cursor with no tiebreak, an upsert's returned rows taken as every row, a broadcast that ignores the result, and a form save that checks no version.</p>
 <p>Why it bites: <code>Ecto.Type.cast(:id, _)</code> accepts any integer, but SQLite integers are 64-bit, so a longer id from a URL raises in the driver. In an FTS5 query a <code>"</code> ends a phrase, and <code>NOT</code> or <code>body:</code> are syntax. Notes saved in the same second share an <code>updated_at</code>, so a cursor on it alone skips or repeats them; an offset shifts whenever a newer note is saved. With <code>on_conflict: :nothing</code>, <code>returning</code> gives back only the rows inserted. A second tab's save overwrites the first.</p>
 <p>Review habit: Read for what is missing: the id's range; the owner, so every query is scoped by the session's user and "not yours" reads as "not there"; a tiebreak column; the rows the insert skipped; the <code>{:error, _}</code> branch; the version the form was rendered with. Scope PubSub topics by user as well, since each subscriber gets every message on its topic. <code>ecto_sqlite3</code> stores <code>utc_datetime</code> as ISO-8601 text, which is the adapter's choice, so <code>&lt;</code> compares strings, and the fixed width keeps that in time order. Inside FTS5 quotes, <code>""</code> is one quote; dropping quotes works too, as the default tokenizer ignores them. <code>optimistic_lock/3</code> plus <code>stale_error_field:</code> turns a stale save into <code>{:error, changeset}</code>; without that option, <code>Repo.update</code> raises <code>Ecto.StaleEntryError</code>.</p>

@@ -19,6 +19,18 @@ TRAILING = ".,;:!?"
 URL = re.compile(r"https?://[^\s)>\]]+")
 BACKTICKED = re.compile(r"(`[^`]+`)")
 
+TITLES = {
+    "how review koans work": "How review koans work",
+    "processes and mailboxes": "Processes and mailboxes",
+    "links monitors and exits": "Links, monitors and exits",
+    "genserver calls and timeouts": "GenServer calls and timeouts",
+    "supervision and restarts": "Supervision and restarts",
+    "ets": "ETS",
+    "ecto queries and transactions": "Ecto queries and transactions",
+    "liveview": "LiveView",
+    "quire": "Quire",
+}
+
 STYLE = """\
 :root {
   color-scheme: light dark;
@@ -148,24 +160,35 @@ def _links_html(urls: list[str]) -> str:
     return f'<p class="more">Read more</p>\n<ul class="links">{items}</ul>\n'
 
 
+def title_for(name: str) -> str:
+    return TITLES[name]
+
+
 def chapters(root: Path, track: str) -> list[tuple[str, str, str]]:
     """(number, short name, lesson) for every chapter of a track, in file order."""
     dialect = DIALECTS[track]
     found = []
     for path in sorted((root / track / "source").glob(dialect.test_glob)):
         number, _, rest = path.name.split("_test.")[0].partition("_")
-        lesson = dialect.lesson(path.read_text(encoding="utf-8")) or ""
+        lesson = dialect.lesson(path.read_text(encoding="utf-8"))
+        if not lesson:
+            raise ValueError(f"{path.name} has no lesson")
         found = [*found, (number, rest.replace("_", " "), lesson)]
     return found
 
 
+def _split_read_more(lesson: str) -> tuple[str, str]:
+    parts = re.split(rf"(?m)^{re.escape(READ_MORE)}", lesson, maxsplit=1)
+    return (parts[0], parts[1]) if len(parts) == 2 else (lesson, "")
+
+
 def section_html(track: str, number: str, name: str, lesson: str) -> str:
-    body, _, more = lesson.partition(READ_MORE)
+    body, more = _split_read_more(lesson)
     paragraphs = "\n".join(_block_html(block) for block in _blocks(body))
     urls = [url.rstrip(".,;") for url in URL.findall(more)]
     return (
         f'<article id="{track}-{number}">\n'
-        f"<h3><small>{number}</small>{escape(name, quote=False)}</h3>\n"
+        f"<h3><small>{number}</small>{escape(title_for(name), quote=False)}</h3>\n"
         f"{paragraphs}\n{_links_html(urls)}</article>\n"
     )
 
