@@ -1,0 +1,21 @@
+exit 0
+--- stdout
+
+[error] GenServer SessionStore terminating
+** (RuntimeError) session reload failed
+    traces/05_sessions.exs:18: SessionStore.handle_cast/2
+    (stdlib 7.3) gen_server.erl:2460: :gen_server.try_handle_cast/3
+    (stdlib 7.3) gen_server.erl:2418: :gen_server.handle_msg/3
+    (stdlib 7.3) proc_lib.erl:333: :proc_lib.init_p_do_apply/3
+Last message: {:"$gen_cast", :reload}
+State: :sessions
+
+[error] Process #PID<0.113.0> raised an exception
+** (ArgumentError) errors were found at the given arguments:
+
+  * 1st argument: the table identifier does not refer to an existing ETS table
+
+    (stdlib 7.3) :ets.lookup(:sessions, "s1")
+    traces/05_sessions.exs:8: SessionStore.fetch/1
+    traces/05_sessions.exs:23: Auth.current_user/1
+--- stderr
