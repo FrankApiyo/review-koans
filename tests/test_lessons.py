@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from dialects import DIALECTS
-from harness import ROOT, case_id, in_scope
+from harness import ROOT, case_id, chapter_filter, in_scope
 
 LINKS = ROOT / "tools" / "links.txt"
 PARTS = ("Look for:", "Why it bites:", "Review habit:", "A common mistake:", "Read more:")
@@ -116,6 +116,8 @@ def test_every_read_more_link_is_an_anchor():
         if lesson.text and (more := paragraph(lesson.text, "Read more:"))
         for url in URL.findall(more)
     }
+    if not linked and chapter_filter():
+        pytest.skip("no lesson in this chapter has Read more links")
     assert linked and linked <= anchors
 
 

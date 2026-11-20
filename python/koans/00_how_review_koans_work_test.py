@@ -39,7 +39,7 @@ def test_a_predict_koan():
 
 def test_discount_verdict():
     """Read koans/review/00_discount.py. Write FINE, or the line number of the bug."""
-    verdict("00_discount.py", __, "ff57135599", "84a39c1baa")
+    verdict("00_discount.py", __, "ff57135599", "9758acd88e")
 
 
 def test_fix_the_discount():

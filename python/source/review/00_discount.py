@@ -1,4 +1,4 @@
-"""Prices are in whole cents, and a discount is a whole percent from 0 to 100.
+"""Prices are in whole, non-negative cents, and a discount is a whole percent from 0 to 100.
 
 The discount is rounded down to whole cents.
 """
