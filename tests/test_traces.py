@@ -298,3 +298,128 @@ def test_check_reports_stale_missing_and_orphan(fake_runs, tmp_path, capsys):
 def test_unknown_track_is_refused():
     with pytest.raises(KeyError, match="unknown track"):
         traces.main(["check", "cobol"])
+
+
+STDLIB_ROOTS = {
+    "homebrew": "/opt/homebrew/Cellar/python@3.13/3.13.9/Frameworks/Python.framework/Versions/3.13/lib/python3.13/",
+    "uv": "/work/.local/share/uv/python/cpython-3.13.9-macos-aarch64-none/lib/python3.13/",
+    "debian": "/usr/lib/python3.13/",
+    "free_threaded": "/opt/py/lib/python3.13t/",
+}
+
+
+@pytest.mark.parametrize("root", STDLIB_ROOTS.values(), ids=STDLIB_ROOTS.keys())
+def test_scrub_rewrites_stdlib_paths_on_homebrew_uv_and_debian_layouts(root):
+    raw = f'  File "{root}json/__init__.py", line 346, in loads\n'
+
+    assert scrub(raw, ROOT) == '  File "<stdlib>/json/__init__.py", line 346, in loads\n'
+
+
+def py_trace(dataclasses_line: int, runners_line: int) -> str:
+    return (
+        "exit 1\n--- stdout\n--- stderr\n"
+        "Traceback (most recent call last):\n"
+        '  File "traces/boom.py", line 9, in <module>\n'
+        "    asyncio.run(main())\n"
+        '  File "<stdlib>/asyncio/runners.py", line %d, in run\n'
+        "    return runner.run(main)\n"
+        "           ~~~~~~~~~~^^^^^^\n"
+        '  File "<stdlib>/dataclasses.py", line %d, in __init__\n'
+        "    self.x = x\n"
+        '  File "traces/boom.py", line 5, in main\n'
+        "    raise ValueError(x)\n"
+        "ValueError: 3\n"
+    ) % (runners_line, dataclasses_line)
+
+
+def test_mask_tolerates_stdlib_line_moves_between_3_13_and_3_14():
+    assert mask(py_trace(860, 195)) == mask(py_trace(917, 205))
+    assert "  <runtime frames>\n" in mask(py_trace(860, 195)) + "\n"
+    assert mask(py_trace(860, 195)).count("<runtime frames>") == 1
+
+
+EXC_GROUP = (
+    "exit 1\n--- stdout\n--- stderr\n"
+    "  + Exception Group Traceback (most recent call last):\n"
+    '  |   File "traces/group.py", line 18, in <module>\n'
+    "  |     asyncio.run(charge_all(orders))\n"
+    '  |   File "<stdlib>/asyncio/runners.py", line %d, in run\n'
+    "  |     return runner.run(main)\n"
+    "  |            ~~~~~~~~~~^^^^^^\n"
+    '  |   File "<stdlib>/asyncio/base_events.py", line 719, in run_until_complete\n'
+    "  |     return future.result()\n"
+    "  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)\n"
+    "  +-+---------------- 1 ----------------\n"
+    "    | Traceback (most recent call last):\n"
+    '    |   File "traces/group.py", line 7, in charge\n'
+    "    |     raise ValueError(order_id)\n"
+    "    | ValueError: o-2\n"
+    "    +------------------------------------\n"
+)
+
+
+def test_mask_collapses_stdlib_frames_inside_an_exception_group_gutter():
+    masked = mask(EXC_GROUP % 195)
+
+    assert masked == mask(EXC_GROUP % 205)
+    assert "  |   <runtime frames>\n  | ExceptionGroup" in masked
+    assert masked.count("<runtime frames>") == 1
+    assert 'File "traces/group.py", line 7' in masked
+
+
+def test_python_course_line_change_is_stale():
+    assert mask(py_trace(860, 195).replace("line 5, in main", "line 6, in main")) != mask(
+        py_trace(860, 195)
+    )
+
+
+def test_python_exception_change_is_stale():
+    assert mask(py_trace(860, 195).replace("ValueError", "TypeError")) != mask(py_trace(860, 195))
+
+
+def test_capture_refuses_python_warnings(fake_runs, tmp_path, monkeypatch):
+    monkeypatch.setattr(traces.sys, "version_info", (3, 13, 9, "final", 0))
+    traces_dir = tmp_path / "python" / "traces"
+    traces_dir.mkdir(parents=True)
+    (traces_dir / "w.py").write_text("")
+    fake_runs["w.py"] = "SyntaxWarning: invalid escape\n" + py_trace(1, 2)
+
+    assert traces.main(["capture", "python"]) == 1
+    assert not (traces_dir / "w.py.trace").exists()
+
+
+def test_capture_python_needs_python_3_13(monkeypatch, tmp_path, capsys):
+    monkeypatch.setattr(traces, "ROOT", tmp_path)
+    monkeypatch.setattr(traces.sys, "version_info", (3, 14, 0, "final", 0))
+    (tmp_path / "python" / "traces").mkdir(parents=True)
+
+    assert traces.main(["capture", "python"]) == 1
+    assert (
+        "capture python traces on Python 3.13: python3.13 tools/traces.py capture python"
+        in capsys.readouterr().err
+    )
+
+
+def test_python_programs_run_with_the_current_interpreter_and_no_bytecode(monkeypatch, tmp_path):
+    program = tmp_path / "python" / "traces" / "p.py"
+    program.parent.mkdir(parents=True)
+    program.write_text("")
+    seen = {}
+
+    def fake_subprocess(command, cwd, env, **_):
+        seen.update(command=command, cwd=cwd, env=env)
+        return type("Done", (), {"returncode": 0, "stdout": "", "stderr": ""})()
+
+    monkeypatch.setattr(traces, "ROOT", tmp_path)
+    monkeypatch.setattr(traces.subprocess, "run", fake_subprocess)
+    traces.run("python", program)
+
+    assert seen["command"] == [traces.sys.executable, "traces/p.py"]
+    assert seen["cwd"] == program.parent.parent.resolve()
+    assert seen["env"]["PYTHONDONTWRITEBYTECODE"] == "1"
+
+
+def test_elixir_and_node_masks_are_unchanged():
+    assert mask(COUNTER).count("    <runtime frames>") == 4
+    assert "Node.js v_" in mask(CART)
+    assert "    <runtime frames>\n" in mask(CART) + "\n"

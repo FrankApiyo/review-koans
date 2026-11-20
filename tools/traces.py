@@ -14,8 +14,9 @@ from pathlib import Path
 from dialects import DIALECTS, dialect_for
 
 ROOT = Path(__file__).resolve().parent.parent
-PROGRAMS = {"elixir": "*.exs"}
+PROGRAMS = {"elixir": "*.exs", "python": "*.py"}
 RUNNERS = {"elixir": "elixir"}
+CAPTURE_PYTHON = (3, 13)
 FIXTURE_SUFFIX = ".trace"
 NEEDS_DEPS = "# needs: deps"
 TIMEOUT_SECONDS = 120
@@ -34,6 +35,9 @@ RUNTIME_FRAME = re.compile(
     rf"^\s+(\((?:{RUNTIME_APPS})(?: [^)]*)?\) |at .*\bnode:internal/)"
 )
 RUNTIME_PLACEHOLDER = "    <runtime frames>"
+STDLIB_PATH = re.compile(r'(?<=File ")[^"]*/lib/python3\.\d+t?/')
+STDLIB_FRAME = re.compile(r'^(?P<gutter>[ |+-]*)File "<stdlib>/')
+PYTHON_PLACEHOLDER = "<runtime frames>"
 MASK = [
     (re.compile(r"^Node\.js v[\d.]+$", re.M), "Node.js v_"),
     (re.compile(r"#PID<[\d.]+>"), "#PID<_>"),
@@ -44,16 +48,35 @@ MASK = [
 
 
 def scrub(text: str, root: Path) -> str:
+    text = STDLIB_PATH.sub("<stdlib>/", text)
     for base in [*(root / track for track in DIALECTS), root]:
         text = text.replace(f"file://{base}/", "").replace(f"{base}/", "")
     return TIMESTAMP.sub("", text)
+
+
+def collapse_stdlib_frames(lines: list[str]) -> list[str]:
+    kept: list[str] = []
+    gutter: str | None = None
+    for line in lines:
+        found = STDLIB_FRAME.match(line)
+        if found:
+            gutter = found["gutter"]
+            placeholder = gutter + PYTHON_PLACEHOLDER
+            if not kept or kept[-1] != placeholder:
+                kept.append(placeholder)
+        elif gutter is not None and line.startswith(gutter + " "):
+            continue
+        else:
+            gutter = None
+            kept.append(line)
+    return kept
 
 
 def mask(text: str) -> str:
     for pattern, replacement in MASK:
         text = pattern.sub(replacement, text)
     lines: list[str] = []
-    for line in text.splitlines():
+    for line in collapse_stdlib_frames(text.splitlines()):
         if not RUNTIME_FRAME.match(line):
             lines.append(line)
         elif not lines or lines[-1] != RUNTIME_PLACEHOLDER:
@@ -70,7 +93,7 @@ def machine_paths() -> re.Pattern[str]:
 def refusal(text: str) -> str | None:
     if machine_paths().search(text):
         return "absolute path"
-    if "warning:" in text:
+    if "warning:" in text.lower():
         return "warning:"
     return None
 
@@ -79,7 +102,10 @@ def run(track: str, program: Path) -> str:
     program = program.resolve()
     cwd = program.parent.parent
     env = {**os.environ, **COLOURLESS}
-    if needs_deps(program):
+    if track == "python":
+        env = {**env, "PYTHONDONTWRITEBYTECODE": "1"}
+        command = [sys.executable, f"traces/{program.name}"]
+    elif needs_deps(program):
         env = {**env, **solutions_env()}
         compile_solutions(cwd)
         command = ["mix", "run", "--no-compile", f"traces/{program.name}"]
@@ -149,6 +175,12 @@ def select(programs: list[Path], names: list[str]) -> list[Path]:
 
 
 def capture(track: str, programs: list[Path]) -> int:
+    if track == "python" and tuple(sys.version_info[:2]) != CAPTURE_PYTHON:
+        print(
+            "capture python traces on Python 3.13: python3.13 tools/traces.py capture python …",
+            file=sys.stderr,
+        )
+        return 1
     refused = 0
     for program in programs:
         output = run(track, program)

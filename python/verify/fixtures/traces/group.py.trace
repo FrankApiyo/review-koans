@@ -1,0 +1,33 @@
+exit 1
+--- stdout
+--- stderr
+  + Exception Group Traceback (most recent call last):
+  |   File "traces/group.py", line 17, in <module>
+  |     asyncio.run(charge_all([("o-1", 30), ("o-2", 0), ("o-3", 12)]))
+  |     ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "<stdlib>/asyncio/runners.py", line 195, in run
+  |     return runner.run(main)
+  |            ~~~~~~~~~~^^^^^^
+  |   File "<stdlib>/asyncio/runners.py", line 118, in run
+  |     return self._loop.run_until_complete(task)
+  |            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  |   File "<stdlib>/asyncio/base_events.py", line 725, in run_until_complete
+  |     return future.result()
+  |            ~~~~~~~~~~~~~^^
+  |   File "traces/group.py", line 12, in charge_all
+  |     async with asyncio.TaskGroup() as group:
+  |                ~~~~~~~~~~~~~~~~~^^
+  |   File "<stdlib>/asyncio/taskgroups.py", line 71, in __aexit__
+  |     return await self._aexit(et, exc)
+  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "<stdlib>/asyncio/taskgroups.py", line 173, in _aexit
+  |     raise BaseExceptionGroup(
+  |     ...<2 lines>...
+  |     ) from None
+  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "traces/group.py", line 7, in charge
+    |     raise ValueError(f"order {order_id}: amount must be positive, got {amount}")
+    | ValueError: order o-2: amount must be positive, got 0
+    +------------------------------------

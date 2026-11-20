@@ -1,0 +1,11 @@
+exit 1
+--- stdout
+--- stderr
+Traceback (most recent call last):
+  File "traces/boom.py", line 5, in <module>
+    parse({"sku": "A1"})
+    ~~~~~^^^^^^^^^^^^^^^
+  File "traces/boom.py", line 2, in parse
+    return body["qty"]
+           ~~~~^^^^^^^
+KeyError: 'qty'
