@@ -1,6 +1,8 @@
 https://docs.python.org/3.13/faq/programming.html
 https://docs.python.org/3.13/library/copy.html
 https://docs.python.org/3.13/library/dataclasses.html
+https://docs.python.org/3.13/library/itertools.html
+https://docs.python.org/3.13/reference/expressions.html
 https://hexdocs.pm/ecto/3.14.3/Ecto.Changeset.html
 https://hexdocs.pm/ecto/3.14.3/Ecto.Multi.html
 https://hexdocs.pm/ecto/3.14.3/Ecto.Query.html

@@ -19,7 +19,7 @@ label, never a raw value or the fix:
     Write:        koans/review/00_discount.py
     Exercised by: koans/00_how_review_koans_work_test.py:47
         Fix the bug in koans/review/00_discount.py in place. The hidden checks name what still fails.
-    2 of 18 koans answered.
+    2 of 30 koans answered.
 
 The checks are readable in `checks/`, as the answers are in `solutions/`. Read them only after
 a real attempt; reading them first defeats the exercise.

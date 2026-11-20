@@ -163,7 +163,7 @@ Exercised by: koans/00_how_review_koans_work_test.exs:42
 Write:        koans/review/00_discount.py
 Exercised by: koans/00_how_review_koans_work_test.py:47
     Fix the bug in koans/review/00_discount.py in place. The hidden checks name what still fails.
-2 of 18 koans answered.</code></pre>
+2 of 30 koans answered.</code></pre>
 <p>The checks are readable in <code>checks/</code>, as the answers are in <code>solutions/</code>. Read them only after a real attempt; reading them first defeats the exercise.</p>
 <p>An import error in a koan file stops the run before any footer: fix what the traceback names, then run <code>pytest</code> again. A fix that loops forever never returns; press Ctrl-C to stop the run. To start again, run <code>git checkout -- koans/</code>.</p>
 </article>
@@ -176,6 +176,16 @@ Exercised by: koans/00_how_review_koans_work_test.py:47
 <p class="mistake"><strong>A common mistake:</strong> patching the symptom. <code>errors = errors or []</code> drops the caller's empty list; copying an argument the caller shares on purpose breaks callers that rely on it; a shallow copy of nested data still shares the inner dict. <code>self.items = self.items + [sku]</code> happens to work but leaves the shared list in place for the next method that appends, and <code>self.items += [sku]</code> is not that rebind: <code>+=</code> extends the shared list in place. Give each instance its own list in <code>__init__</code>. A traceback can miss the cause: in the <code>01_note</code> trace, the field at fault is on line 7, which no frame prints. Read the error, then find the field it names.</p>
 <p class="more">Read more</p>
 <ul class="links"><li><a href="https://docs.python.org/3.13/faq/programming.html">https://docs.python.org/3.13/faq/programming.html</a></li><li><a href="https://docs.python.org/3.13/library/copy.html">https://docs.python.org/3.13/library/copy.html</a></li><li><a href="https://docs.python.org/3.13/library/dataclasses.html">https://docs.python.org/3.13/library/dataclasses.html</a></li></ul>
+</article>
+
+<article id="python-02">
+<h3><small>02</small>Equality, hashing and iteration</h3>
+<p>Look for: <code>is</code> between values; a one-item tuple written without its comma; a dataclass with <code>eq=False</code>, or a hash over fields that can still change; a generator or iterator read twice; a dict or list changed inside a loop over it; <code>zip</code> over inputs that may differ in length.</p>
+<p>Why it bites: none of these raise. <code>("active")</code> is a string, so <code>in</code> matches any part of it. A generator is empty after one full pass, so a second <code>sum</code> over it is 0. <code>zip</code> stops at the shorter input. With <code>eq=False</code>, equal records compare and hash by identity, so a set keeps both. The answer is just smaller: a row, a duplicate or a refusal goes missing.</p>
+<p>Review habit: Ask who supplied the value. <code>is</code> compares identity, which is the language's rule; whether a string parsed from JSON is the same object as the literal in your source is CPython's behaviour, and here it is not. A parameter typed <code>Iterable</code> may be a reader that runs once. A header row and a data row come from different places and can disagree in length.</p>
+<p class="mistake"><strong>A common mistake:</strong> fixing what the eye lands on. <code>rows = list(rows)</code> copies the input but still reads one generator twice, and <code>filter(...)</code> is one pass too. <code>unsafe_hash=True</code> dedupes equal SKUs but loses one edited after it went into a set; <code>frozen=True</code> refuses the edit. A length check in one direction catches half the bad rows. A traceback can name the wrong line: the <code>02_drop_expired</code> trace points at the <code>for</code> on line 2, but the <code>del</code> on line 4 changed the dict.</p>
+<p class="more">Read more</p>
+<ul class="links"><li><a href="https://docs.python.org/3.13/reference/expressions.html">https://docs.python.org/3.13/reference/expressions.html</a></li><li><a href="https://docs.python.org/3.13/library/dataclasses.html">https://docs.python.org/3.13/library/dataclasses.html</a></li><li><a href="https://docs.python.org/3.13/library/itertools.html">https://docs.python.org/3.13/library/itertools.html</a></li></ul>
 </article>
 </section>
 <footer>Built by <code>tools/lessons.py</code> from the lessons in each track's <code>source/</code> folder. Lessons are under CC BY 4.0; see <code>LICENSE-lessons</code>.</footer>

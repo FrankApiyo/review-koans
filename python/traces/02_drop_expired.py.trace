@@ -1,0 +1,11 @@
+exit 1
+--- stdout
+--- stderr
+Traceback (most recent call last):
+  File "traces/02_drop_expired.py", line 13, in <module>
+    drop_expired(sessions)
+    ~~~~~~~~~~~~^^^^^^^^^^
+  File "traces/02_drop_expired.py", line 2, in drop_expired
+    for token, session in sessions.items():
+                          ~~~~~~~~~~~~~~^^
+RuntimeError: dictionary changed size during iteration
