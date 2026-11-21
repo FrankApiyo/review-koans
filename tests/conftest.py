@@ -1,4 +1,12 @@
+from pathlib import Path
+
 from harness import CHAPTER_VARIABLE, chapter_filter
+
+
+def pytest_configure(config) -> None:
+    basetemp = config.option.basetemp
+    if basetemp:
+        Path(basetemp).absolute().parent.mkdir(parents=True, exist_ok=True)
 
 
 def pytest_report_header(config) -> str:
