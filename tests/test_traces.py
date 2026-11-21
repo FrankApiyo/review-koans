@@ -58,6 +58,41 @@ TypeError: Cannot read properties of undefined (reading 'valueOf')
 Node.js v25.9.0
 """
 
+BOOM = """\
+exit 1
+--- stdout
+reporting
+--- stderr
+traces/boom.ts:2
+  return order.items.length
+                     ^
+
+TypeError: Cannot read properties of undefined (reading 'length')
+    at itemCount (traces/boom.ts:2:22)
+    at report (traces/boom.ts:7:20)
+    at traces/boom.ts:11:13
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:639:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v25.9.0
+"""
+
+UNHANDLED = """\
+exit 1
+--- stdout
+order o-17 complete
+--- stderr
+traces/unhandled.ts:4
+    throw new Error(`invalid recipient: ${email}`)
+          ^
+
+Error: invalid recipient: ann.example.com
+    at sendReceipt (traces/unhandled.ts:4:11)
+
+Node.js v25.9.0
+"""
+
 LIVE = """\
 [error] GenServer #PID<0.512.0> terminating
 ** (FunctionClauseError) no function clause matching in Board.handle_event/3
@@ -135,9 +170,24 @@ def test_mask_tolerates_node_internal_frame_moves():
     dropped = CART.replace(
         "    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n", ""
     )
+    node24_boom = (
+        BOOM.replace("module_job:437:25", "module_job:343:25")
+        .replace("loader:639:26", "loader:665:26")
+        .replace("run_main:101:5", "run_main:117:5")
+        .replace("v25.9.0", "v24.11.1")
+        .replace(
+            "    at async asyncRunEntryPointWithESMLoader",
+            "    at async ModuleLoader.import (node:internal/modules/esm/loader:612:24)\n"
+            "    at async asyncRunEntryPointWithESMLoader",
+        )
+    )
 
     assert mask(moved) == mask(CART) == mask(dropped)
     assert "    at traces/cart.mjs:7:1\n    <runtime frames>\n\nNode.js v_" in mask(CART)
+    assert node24_boom != BOOM
+    assert mask(node24_boom) == mask(BOOM)
+    assert "    at traces/boom.ts:11:13\n    <runtime frames>\n\nNode.js v_" in mask(BOOM)
+    assert mask(UNHANDLED.replace("v25.9.0", "v24.11.1")) == mask(UNHANDLED)
 
 
 def test_mask_hides_refs_ports_and_liveview_ids():
@@ -419,7 +469,89 @@ def test_python_programs_run_with_the_current_interpreter_and_no_bytecode(monkey
     assert seen["env"]["PYTHONDONTWRITEBYTECODE"] == "1"
 
 
-def test_elixir_and_node_masks_are_unchanged():
+def test_python_and_elixir_masks_are_unchanged():
     assert mask(COUNTER).count("    <runtime frames>") == 4
-    assert "Node.js v_" in mask(CART)
-    assert "    <runtime frames>\n" in mask(CART) + "\n"
+    assert mask(py_trace(860, 195)) == (
+        "exit 1\n--- stdout\n--- stderr\n"
+        "Traceback (most recent call last):\n"
+        '  File "traces/boom.py", line 9, in <module>\n'
+        "    asyncio.run(main())\n"
+        "  <runtime frames>\n"
+        '  File "traces/boom.py", line 5, in main\n'
+        "    raise ValueError(x)\n"
+        "ValueError: 3"
+    )
+
+
+def run_typescript(monkeypatch, tmp_path) -> tuple[Path, dict]:
+    program = tmp_path / "typescript" / "traces" / "x.ts"
+    program.parent.mkdir(parents=True)
+    program.write_text("")
+    seen = {}
+
+    def fake_subprocess(command, cwd, env, **_):
+        seen.update(command=command, cwd=cwd, env=env)
+        return type("Done", (), {"returncode": 0, "stdout": "", "stderr": ""})()
+
+    monkeypatch.setenv("NODE_OPTIONS", "--require=./elsewhere.cjs")
+    monkeypatch.setattr(traces, "ROOT", tmp_path)
+    monkeypatch.setattr(traces.subprocess, "run", fake_subprocess)
+    traces.run("typescript", program)
+    return program, seen
+
+
+def test_typescript_programs_run_under_node_with_warnings_disabled(monkeypatch, tmp_path):
+    program, seen = run_typescript(monkeypatch, tmp_path)
+
+    assert seen["command"] == ["node", "--disable-warning=ExperimentalWarning", "traces/x.ts"]
+    assert seen["cwd"] == program.parent.parent.resolve()
+    assert {key: seen["env"][key] for key in (*traces.COLOURLESS, "NODE_DISABLE_COLORS")} == {
+        **traces.COLOURLESS,
+        "NODE_DISABLE_COLORS": "1",
+    }
+    assert "NODE_OPTIONS" not in seen["env"]
+
+
+def test_scrub_rewrites_file_urls_in_node_code_frames_and_stacks():
+    raw = (
+        "file:///work/review-koans/typescript/traces/x.ts:4\n"
+        "    at sendReceipt (file:///work/review-koans/typescript/traces/x.ts:4:11)\n"
+        "    at file:///work/review-koans/typescript/traces/x.ts:9:1\n"
+    )
+
+    assert scrub(raw, ROOT) == (
+        "traces/x.ts:4\n"
+        "    at sendReceipt (traces/x.ts:4:11)\n"
+        "    at traces/x.ts:9:1\n"
+    )
+
+
+def test_typescript_course_line_change_is_stale():
+    moved = BOOM.replace("(traces/boom.ts:7:20)", "(traces/boom.ts:8:20)")
+
+    assert mask(moved) != mask(BOOM)
+
+
+def test_typescript_error_name_change_is_stale():
+    renamed = BOOM.replace("TypeError: Cannot", "RangeError: Cannot")
+
+    assert mask(renamed) != mask(BOOM)
+
+
+def test_capture_refuses_typescript_on_another_node_major(fake_runs, tmp_path, monkeypatch, capsys):
+    traces_dir = tmp_path / "typescript" / "traces"
+    traces_dir.mkdir(parents=True)
+    (traces_dir / "boom.ts").write_text("")
+    fake_runs["boom.ts"] = BOOM
+
+    monkeypatch.setattr(traces, "node_version", lambda: "v24.11.1")
+    assert traces.main(["capture", "typescript"]) == 1
+    assert not (traces_dir / "boom.ts.trace").exists()
+    assert (
+        "capture typescript traces on Node 25: node --version says v24.11.1"
+        in capsys.readouterr().err
+    )
+
+    monkeypatch.setattr(traces, "node_version", lambda: "v25.9.0")
+    assert traces.main(["capture", "typescript"]) == 0
+    assert (traces_dir / "boom.ts.trace").read_text() == BOOM

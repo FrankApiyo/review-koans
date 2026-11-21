@@ -14,9 +14,11 @@ from pathlib import Path
 from dialects import DIALECTS, dialect_for
 
 ROOT = Path(__file__).resolve().parent.parent
-PROGRAMS = {"elixir": "*.exs", "python": "*.py"}
+PROGRAMS = {"elixir": "*.exs", "python": "*.py", "typescript": "*.ts"}
 RUNNERS = {"elixir": "elixir"}
 CAPTURE_PYTHON = (3, 13)
+CAPTURE_NODE = 25
+NODE = ["node", "--disable-warning=ExperimentalWarning"]
 FIXTURE_SUFFIX = ".trace"
 NEEDS_DEPS = "# needs: deps"
 TIMEOUT_SECONDS = 120
@@ -105,6 +107,10 @@ def run(track: str, program: Path) -> str:
     if track == "python":
         env = {**env, "PYTHONDONTWRITEBYTECODE": "1"}
         command = [sys.executable, f"traces/{program.name}"]
+    elif track == "typescript":
+        env = {key: value for key, value in env.items() if key != "NODE_OPTIONS"}
+        env = {**env, "NODE_DISABLE_COLORS": "1"}
+        command = [*NODE, f"traces/{program.name}"]
     elif needs_deps(program):
         env = {**env, **solutions_env()}
         compile_solutions(cwd)
@@ -174,12 +180,25 @@ def select(programs: list[Path], names: list[str]) -> list[Path]:
     return [by_name[name] for name in names]
 
 
-def capture(track: str, programs: list[Path]) -> int:
+def node_version() -> str:
+    done = subprocess.run(["node", "--version"], capture_output=True, text=True, check=True)
+    return done.stdout.strip()
+
+
+def wrong_runtime(track: str) -> str | None:
     if track == "python" and tuple(sys.version_info[:2]) != CAPTURE_PYTHON:
-        print(
-            "capture python traces on Python 3.13: python3.13 tools/traces.py capture python …",
-            file=sys.stderr,
-        )
+        return "capture python traces on Python 3.13: python3.13 tools/traces.py capture python …"
+    if track == "typescript":
+        version = node_version()
+        if version.lstrip("v").split(".")[0] != str(CAPTURE_NODE):
+            return f"capture typescript traces on Node {CAPTURE_NODE}: node --version says {version}"
+    return None
+
+
+def capture(track: str, programs: list[Path]) -> int:
+    wrong = wrong_runtime(track)
+    if wrong:
+        print(wrong, file=sys.stderr)
         return 1
     refused = 0
     for program in programs:
