@@ -34,6 +34,11 @@ TITLES = {
     "exceptions": "Exceptions",
     "asyncio": "asyncio",
     "money time files and injection": "Money, time, files and injection",
+    "equality numbers and sorting": "Equality, numbers and sorting",
+    "references and copies": "References and copies",
+    "this and closures": "this and closures",
+    "async ordering": "Async ordering",
+    "untrusted data and dates": "Untrusted data and dates",
 }
 
 STYLE = """\

@@ -1,0 +1,16 @@
+exit 1
+--- stdout
+2
+--- stderr
+traces/00_cart_report.ts:2
+  return order.items.length
+                     ^
+
+TypeError: Cannot read properties of undefined (reading 'length')
+    at itemCount (traces/00_cart_report.ts:2:22)
+    at traces/00_cart_report.ts:6:13
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:639:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v25.9.0

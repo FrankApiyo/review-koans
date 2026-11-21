@@ -47,7 +47,7 @@ footer { color: var(--muted); margin-top: 3rem; font-size: 0.9rem; }
 <main>
 <h1>Review koans lessons</h1>
 <p class="lead">The lesson from the top of each chapter. Everything here works offline; only the Read more links leave the page.</p>
-<nav><a href="#elixir">Elixir</a><a href="#python">Python</a></nav>
+<nav><a href="#elixir">Elixir</a><a href="#python">Python</a><a href="#typescript">Typescript</a></nav>
 
 <section id="elixir">
 <h2>Elixir</h2>
@@ -216,6 +216,26 @@ Exercised by: koans/00_how_review_koans_work_test.py:47
 <p class="mistake"><strong>A common mistake:</strong> fixing the sample instead of the rule. Escaping quotes by hand still builds the SQL text from the value; refusing every name that holds <code>..</code> refuses honest names and still lets an absolute path through; comparing the start of two path strings also matches a sibling folder whose name begins the same way; letting the last share take the rest can leave it more than a cent from the others; returning <code>None</code> on a parse error hides the error and still leaves the file open. In the <code>05_is_expired</code> trace, line 5 only compares; the naive time was made on line 9.</p>
 <p class="more">Read more</p>
 <ul class="links"><li><a href="https://docs.python.org/3.13/library/decimal.html">https://docs.python.org/3.13/library/decimal.html</a></li><li><a href="https://docs.python.org/3.13/library/datetime.html">https://docs.python.org/3.13/library/datetime.html</a></li><li><a href="https://docs.python.org/3.13/library/sqlite3.html">https://docs.python.org/3.13/library/sqlite3.html</a></li><li><a href="https://docs.python.org/3.13/library/subprocess.html">https://docs.python.org/3.13/library/subprocess.html</a></li></ul>
+</article>
+</section>
+
+<section id="typescript">
+<h2>Typescript</h2>
+<article id="typescript-00">
+<h3><small>00</small>How review koans work</h3>
+<p>Review koans come in three kinds, and each one fails until you answer it.</p>
+<ul><li>Predict: replace <code>__</code> with the value that makes the assertion true.</li><li>Review: read the module in <code>koans/review/</code>, then replace the <code>__</code> in its verdict with "fine", or with the number of the line that holds the bug. About one review in five is fine. After a bug, the next koan has you fix it in place, and hidden checks run your fix.</li><li>Trace: read a real crash captured in <code>traces/</code>, and name its cause and where it came from.</li></ul>
+<p><code>npm test</code> stops at the first koan that fails, and its footer says where to work. A blank:</p>
+<pre><code>Meditate on koans/00_how_review_koans_work_test.ts:36</code></pre>
+<p>A fix names the file to change and the koan that runs its checks. A failing check shows its label, never a raw value or the fix:</p>
+<pre><code>A hidden case still fails: an ordinary discount
+------------------------------- The master says --------------------------------
+Write:        koans/review/00_discount.ts
+Exercised by: koans/00_how_review_koans_work_test.ts:44
+    Fix the bug in koans/review/00_discount.ts in place. The hidden checks name what still fails.
+2 of 5 koans answered.</code></pre>
+<p>The checks are readable in <code>checks/</code>, as the answers are in <code>solutions/</code>. Read them only after a real attempt; reading them first defeats the exercise.</p>
+<p>A syntax error in a koan file stops the run, and the footer names the file: fix it, then run <code>npm test</code> again. A fix that loops forever never returns; press Ctrl-C to stop the run. To start again, run <code>git checkout -- koans/</code>.</p>
 </article>
 </section>
 <footer>Built by <code>tools/lessons.py</code> from the lessons in each track's <code>source/</code> folder. Lessons are under CC BY 4.0; see <code>LICENSE-lessons</code>.</footer>
