@@ -75,7 +75,7 @@ test("Read traces/02_booking.ts.trace. Name the error, then the file and line it
 })
 
 test("Read koans/review/02_dedupe.ts. Write \"fine\", or the line number of the bug.", () => {
-  verdict("02_dedupe.ts", __, "11ecde6259,7f6da239a7,bf964fd458,c2ccecc542,c8b664cefd,c8bc1840d4,cb1ab28c93,ce9e3cbc5f,df536e867d,e044487026", "831788adb7")
+  verdict("02_dedupe.ts", __, "bf964fd458,c2ccecc542,cb1ab28c93,ce9e3cbc5f", "831788adb7")
 })
 
 test("Fix the bug in koans/review/02_dedupe.ts in place. The hidden checks name what still fails.", async () => {
