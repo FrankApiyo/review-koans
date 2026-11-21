@@ -10,6 +10,11 @@ import { reviewPath } from "./verdict.ts"
 
 const PASSED = Symbol("passed")
 const UNHANDLED = "left a rejection unhandled"
+const NEVER_LOADED = "it never finished loading"
+const LOAD_LIMIT_MS = 10_000
+
+const realSetTimeout = globalThis.setTimeout
+const realClearTimeout = globalThis.clearTimeout
 
 type Cause = string | undefined | typeof PASSED
 
@@ -64,6 +69,7 @@ export function findChecks(koanFile: string, stem: string): string {
 
 function freshImport(file: string): Promise<Record<string, unknown>> {
   imports += 1
+  vi.resetModules()
   return import(/* @vite-ignore */ `${pathToFileURL(file).href}?case=${imports}`)
 }
 
@@ -88,16 +94,14 @@ async function attempt(file: string, check: Case): Promise<Settled<unknown>> {
 }
 
 async function cleanUp(): Promise<unknown> {
+  if (!vi.isFakeTimers()) return undefined
   try {
-    if (vi.isFakeTimers()) {
-      await drain()
-      vi.clearAllTimers()
-    }
+    await drain()
     return undefined
   } catch (error) {
     return error
   } finally {
-    await macrotask()
+    vi.clearAllTimers()
   }
 }
 
@@ -120,8 +124,7 @@ function restoreZone(zone: string | undefined): void {
   else process.env.TZ = zone
 }
 
-async function runCase(file: string, check: Case): Promise<Cause> {
-  const zone = process.env.TZ
+async function claiming<T>(work: () => Promise<T>): Promise<{ result: T; unhandled: boolean }> {
   let unhandled = false
   const listener = (reason: unknown): void => {
     claim(reason)
@@ -129,14 +132,37 @@ async function runCase(file: string, check: Case): Promise<Cause> {
   }
   process.prependListener("unhandledRejection", listener)
   try {
-    const outcome = await attempt(file, check)
-    const leftover = await cleanUp()
+    const result = await work()
+    await macrotask()
+    return { result, unhandled }
+  } finally {
+    process.removeListener("unhandledRejection", listener)
+  }
+}
+
+async function runCase(file: string, check: Case): Promise<Cause> {
+  const zone = process.env.TZ
+  try {
+    const { result, unhandled } = await claiming(async () => [await attempt(file, check), await cleanUp()] as const)
     if (unhandled) return UNHANDLED
+    const [outcome, leftover] = result
     const cause = causeOf(outcome)
     return cause === PASSED && leftover !== undefined ? causeOf({ done: true, error: leftover }) : cause
   } finally {
-    process.removeListener("unhandledRejection", listener)
     restoreZone(zone)
+  }
+}
+
+// Wall-clock time bounds only the module loader, whose transforms cross a real process boundary; it never decides a case.
+async function loadReview(file: string): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const tooLong = new Promise<never>((_resolve, reject) => {
+    timer = realSetTimeout(() => reject(new Error(NEVER_LOADED)), LOAD_LIMIT_MS)
+  })
+  try {
+    await Promise.race([freshImport(file), tooLong])
+  } finally {
+    realClearTimeout(timer)
   }
 }
 
@@ -145,12 +171,16 @@ export async function runChecks(koanUrl: string, stem: string): Promise<void> {
   const koanFile = fileURLToPath(koanUrl)
   const file = join(dirname(koanFile), "review", `${stem}.ts`)
   const path = reviewPath(koanFile, `${stem}.ts`)
-  try {
-    await freshImport(file)
-  } catch (error) {
-    throw new ReviewDidNotLoad(path, error)
-  }
-  for (const check of await loadCases(findChecks(koanFile, stem))) {
+  const loaded = await claiming(async () => {
+    try {
+      await loadReview(file)
+    } catch (error) {
+      return new ReviewDidNotLoad(path, error)
+    }
+    return loadCases(findChecks(koanFile, stem))
+  })
+  if (loaded.result instanceof ReviewDidNotLoad) throw loaded.result
+  for (const check of loaded.result) {
     const cause = await runCase(file, check)
     if (cause !== PASSED) throw new HiddenCase(check.label, check.kind, path, cause)
   }

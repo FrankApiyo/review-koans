@@ -399,7 +399,16 @@ def _review_parts(path: str, text: str, dialect: Dialect) -> tuple[list[str | in
     return segments, tuple(placed), koans
 
 
+def _refuse_top_level_await(path: str, text: str, dialect: Dialect) -> None:
+    if dialect.top_level_await is None:
+        return
+    for number, line in enumerate(_split_lines(text), 1):
+        if dialect.top_level_await.match(line):
+            raise GenerationError(f"{path}:{number}: top-level await in a review module; hidden checks cannot bound it")
+
+
 def render_review(path: str, text: str, dialect: Dialect) -> Review:
+    _refuse_top_level_await(path, text, dialect)
     segments, blocks, koans = _review_parts(path, text, dialect)
     if not blocks:
         raise GenerationError(f"{path}:1: fine review needs a guard block")

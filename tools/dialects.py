@@ -22,6 +22,7 @@ class Dialect:
     lesson: Callable[[str], str | None]
     koan_head: re.Pattern[str]
     meditation: Callable[[list[str], int], str | None]
+    top_level_await: re.Pattern[str] | None = None
 
 
 _SIGIL = re.compile(r"~[a-zA-Z]")
@@ -279,6 +280,7 @@ TYPESCRIPT = Dialect(
     lesson=_typescript_lesson,
     koan_head=re.compile(r'^test\("'),
     meditation=_typescript_meditation,
+    top_level_await=re.compile(r"^(?![\s/*]).*?\bawait\b"),
 )
 
 DIALECTS: dict[str, Dialect] = {ELIXIR.name: ELIXIR, PYTHON.name: PYTHON, TYPESCRIPT.name: TYPESCRIPT}

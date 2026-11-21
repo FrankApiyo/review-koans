@@ -117,6 +117,36 @@ test("each case gets a fresh module", () => {
   expect(koansLines(done.output)).toEqual([`KOANS-TEST ok ${paths("hidden_fresh_state").koan}:4`, "KOANS-RESULT ok"])
 })
 
+test("each case gets fresh sibling modules too", () => {
+  const done = run("hidden_fresh_sibling")
+  expect(done.code).toBe(0)
+  expect(koansLines(done.output)).toEqual([`KOANS-TEST ok ${paths("hidden_fresh_sibling").koan}:4`, "KOANS-RESULT ok"])
+})
+
+test("a rejection in the review's top-level code is labelled, not dumped", () => {
+  const fixture = "hidden_load_rejection"
+  const done = run(fixture)
+  expect(done.output.startsWith(`\n${footer(fixture, "A hidden case still fails: adding an item (it left a rejection unhandled)")}\n`)).toBe(true)
+  expect(done.output).not.toContain("TOPLEVEL-SECRET-1")
+  expect(koansLines(done.output)).toEqual(kindLines(fixture, "HiddenCase:twin"))
+})
+
+test("a review that never finishes loading names the file to fix", () => {
+  const started = process.hrtime.bigint()
+  const done = run("hidden_never_loads")
+  const seconds = Number(process.hrtime.bigint() - started) / 1e9
+  expect(seconds).toBeLessThan(25)
+  const { review } = paths("hidden_never_loads")
+  expect(done.output).toContain(footer("hidden_never_loads", `${review} does not load: it never finished loading`))
+  expect(koansLines(done.output)).toEqual(kindLines("hidden_never_loads", "ReviewDidNotLoad"))
+})
+
+test("a timer left by one case never fires in the next", () => {
+  const done = run("hidden_leftover_interval")
+  expect(done.code).toBe(0)
+  expect(koansLines(done.output)).toEqual([`KOANS-TEST ok ${paths("hidden_leftover_interval").koan}:4`, "KOANS-RESULT ok"])
+})
+
 test("checks are found from a nested variant folder", () => {
   const done = run("hidden_nested")
   expect(done.code).toBe(0)

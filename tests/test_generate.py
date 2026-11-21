@@ -1006,3 +1006,19 @@ def test_bare_generate_skips_tracks_without_a_source_folder(tmp_path, capsys):
     capsys.readouterr()
     assert main(["typescript"], root=tmp_path) == 1
     assert "typescript/source is not a directory" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "line",
+    ["const prices = await load()", "await ready", "export const prices = await load()", "for await (const x of xs) {}"],
+)
+def test_typescript_review_refuses_top_level_await(line):
+    src = f"/** Doc. */\n{line}\n" + TS_GUARD_REVIEW
+    with pytest.raises(GenerationError, match=r"review/f\.ts:2: top-level await in a review module"):
+        render_review("review/f.ts", src, TYPESCRIPT)
+
+
+def test_typescript_review_allows_await_inside_a_function():
+    src = "export async function f() {\n  // >>> guard\n  return await g()\n  // === wrong: partial — nothing\n  // <<<\n}\n"
+    render_review("review/f.ts", src, TYPESCRIPT)
+    render_review("review/f.py", "x = 1  # await later\n" + "def f():\n    # >>> guard\n    return 1\n    # === wrong: partial — nothing\n    # <<<\n", PYTHON)
