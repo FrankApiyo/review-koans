@@ -12,7 +12,8 @@ it keeps the `this` of the code around it, so an arrow class field stays tied to
 Every `bind` call makes a new function, and `off` removes only the very function `on` was
 given. `var` makes one variable for the whole function, so every function made in the loop
 reads its last value; `let` in a loop head makes a fresh one each pass. Destructuring copies
-the value as it is at that moment, and later changes to the object never reach the copy.
+the value as it is at that moment, and later assignments to that property never reach the
+copy.
 
 Review habit: Ask who supplied the value. For `this`, the caller supplies it, so find the call
 that runs the function, not the line that defines it. For a value a function reads later, ask
@@ -91,7 +92,7 @@ test("A counter hands out an increment, a getter and a snapshot of the same vari
 })
 
 test("Read koans/review/03_timeout.ts. Write \"fine\", or the line number of the bug.", () => {
-  verdict("03_timeout.ts", 3, "02becb8761,2cb735edf8,999f3da1c8,9bcbc36479", "8241af7c00")
+  verdict("03_timeout.ts", 3, "02becb8761,2cb735edf8,9bcbc36479", "646addda46")
 })
 
 test("Fix the bug in koans/review/03_timeout.ts in place. The hidden checks name what still fails.", async () => {
