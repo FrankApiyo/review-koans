@@ -2,6 +2,7 @@ import { dirname, relative, sep } from "node:path"
 import { stripVTControlCharacters } from "node:util"
 import type { Reporter, SerializedError, TestCase, TestModule, Vitest } from "vitest/node"
 import { type Failure, render, total } from "./footer.ts"
+import { firstLine } from "./text.ts"
 
 type Finished = { kind: string; path: string; line: number }
 type Failed = { kind: string; failure: Failure }
@@ -16,16 +17,7 @@ const byText = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0)
 const byPlace = (a: { path: string; line: number | null }, b: { path: string; line: number | null }): number =>
   byText(a.path, b.path) || (a.line ?? 0) - (b.line ?? 0)
 
-const WRAPPER = /^Transform failed with \d+ errors?:$/
 const NO_MATCH = "No koan file matches. Check the path and the file name, for example: npx vitest run koans/<file>_test.ts"
-
-function firstLine(message: unknown): string {
-  const lines = stripVTControlCharacters(String(message ?? ""))
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line !== "")
-  return (WRAPPER.test(lines[0] ?? "") ? lines[1] : lines[0]) ?? ""
-}
 
 const errorName = (error: SerializedError): string => error.name ?? "Error"
 

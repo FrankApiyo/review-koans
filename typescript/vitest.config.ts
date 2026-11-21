@@ -16,5 +16,6 @@ export default defineConfig({
     env: { TZ: "America/New_York" },
     testTimeout: 30_000,
     hookTimeout: 30_000,
+    onUnhandledError: (error) => (error as { koansClaimed?: unknown }).koansClaimed !== true,
   },
 })
