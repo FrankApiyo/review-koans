@@ -17,10 +17,10 @@ const byPlace = (a: { path: string; line: number | null }, b: { path: string; li
   byText(a.path, b.path) || (a.line ?? 0) - (b.line ?? 0)
 
 const WRAPPER = /^Transform failed with \d+ errors?:$/
-const NO_MATCH = "No koan file matches. Check the path and the file name, for example: npx vitest run koans/01_equality_test.ts"
+const NO_MATCH = "No koan file matches. Check the path and the file name, for example: npx vitest run koans/<file>_test.ts"
 
-function firstLine(message: string): string {
-  const lines = stripVTControlCharacters(message)
+function firstLine(message: unknown): string {
+  const lines = stripVTControlCharacters(String(message ?? ""))
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line !== "")
@@ -54,8 +54,8 @@ function escaped(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
 
-export function messageLine(message: string, fileName: string): number | null {
-  const named = new RegExp(`(?:^|[\\s/[(])${escaped(fileName)}:(\\d+)`, "m").exec(stripVTControlCharacters(message))
+export function messageLine(message: unknown, fileName: string): number | null {
+  const named = new RegExp(`(?:^|[\\s/[(])${escaped(fileName)}:(\\d+)`, "m").exec(stripVTControlCharacters(String(message ?? "")))
   return named ? Number(named[1]) : null
 }
 
@@ -138,7 +138,10 @@ export class KoanReporter implements Reporter {
   }
 }
 
-const describe = (error: SerializedError): string => `${errorName(error)}: ${firstLine(error.message)}`
+function describe(error: SerializedError): string {
+  const line = firstLine(error.message)
+  return line === "" ? `${errorName(error)} (no message)` : `${errorName(error)}: ${line}`
+}
 
 function foreign(error: SerializedError, path: string, line: number | null): Failure {
   return { path, line, meditation: null, message: describe(error), write: null }

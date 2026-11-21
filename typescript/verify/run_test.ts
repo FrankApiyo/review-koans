@@ -15,7 +15,14 @@ const BROKEN_DIR = "verify/fixtures/koan_syntax_error"
 const BROKEN = `${BROKEN_DIR}/01_broken_test.ts`
 const VALUE = "Replace __ with the value that makes this true."
 const VERIFY = { KOANS_VERIFY: "1" }
-const NO_MATCH = "No koan file matches. Check the path and the file name, for example: npx vitest run koans/01_equality_test.ts"
+const NO_MATCH = "No koan file matches. Check the path and the file name, for example: npx vitest run koans/<file>_test.ts"
+const NOTHING = "verify/fixtures/unhandled_nothing"
+const UNHANDLED_NOTHING_FOOTER = "\nError (no message)\nError (no message)\n2 of 2 koans answered.\n"
+const UNHANDLED_NOTHING_LINES = [
+  `KOANS-TEST ok ${NOTHING}/01_undefined_test.ts:3`,
+  `KOANS-TEST ok ${NOTHING}/02_null_test.ts:3`,
+  "KOANS-RESULT Error",
+]
 
 async function learnerBail(verify: string | undefined): Promise<unknown> {
   vi.resetModules()
@@ -159,4 +166,21 @@ test("an unhandled error with no koan frame still ends the footer without enligh
   expect(done.output).not.toContain(ENLIGHTENMENT)
   expect(done.output).toContain("\nError: stray value\n1 of 1 koans answered.\n")
   expect(koansLines(done.output)).toEqual([`KOANS-TEST ok ${file}:3`, "KOANS-RESULT Error"])
+})
+
+test("a rejection with no message still gets a footer and a result", () => {
+  const done = runKoans("verify/fixtures/unhandled_nothing", [], VERIFY)
+  expect(done.code).toBe(1)
+  expect(done.output).not.toContain("ERR_INVALID_ARG_TYPE")
+  expect(done.output).not.toContain(ENLIGHTENMENT)
+  expect(done.output).toContain(UNHANDLED_NOTHING_FOOTER)
+  expect(koansLines(done.output)).toEqual(UNHANDLED_NOTHING_LINES)
+})
+
+test("a module error with no line names the file and reports line 0, as the Python runner does", () => {
+  const file = "verify/fixtures/module_error_no_line/01_after_all_string_test.ts"
+  const done = runKoans("verify/fixtures/module_error_no_line", [], VERIFY)
+  expect(done.code).toBe(1)
+  expect(done.output).toContain(`\nError: cleanup failed\n${MASTER}\nMeditate on ${file}\n1 of 1 koans answered.\n`)
+  expect(koansLines(done.output)).toEqual([`KOANS-TEST ok ${file}:7`, `KOANS-RESULT Error ${file}:0`])
 })
