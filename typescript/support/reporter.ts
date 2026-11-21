@@ -16,8 +16,15 @@ const byText = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0)
 const byPlace = (a: { path: string; line: number | null }, b: { path: string; line: number | null }): number =>
   byText(a.path, b.path) || (a.line ?? 0) - (b.line ?? 0)
 
+const WRAPPER = /^Transform failed with \d+ errors?:$/
+const NO_MATCH = "No koan file matches. Check the path and the file name, for example: npx vitest run koans/01_equality_test.ts"
+
 function firstLine(message: string): string {
-  return stripVTControlCharacters(message).split("\n").find((line) => line.trim() !== "")?.trim() ?? ""
+  const lines = stripVTControlCharacters(message)
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line !== "")
+  return (WRAPPER.test(lines[0] ?? "") ? lines[1] : lines[0]) ?? ""
 }
 
 const errorName = (error: SerializedError): string => error.name ?? "Error"
@@ -29,7 +36,7 @@ function kindOf(error: SerializedError): string {
 
 function messageOf(error: SerializedError): string {
   const name = errorName(error)
-  return OWN.has(name) ? error.message : `${name}: ${firstLine(error.message)}`
+  return OWN.has(name) ? error.message : describe(error)
 }
 
 function writeOf(error: SerializedError): string | null {
@@ -37,17 +44,24 @@ function writeOf(error: SerializedError): string | null {
 }
 
 function frameLine(error: SerializedError, moduleId: string): number | undefined {
-  return error.stacks?.find((frame) => frame.file === moduleId)?.line
+  const parsed = error.stacks?.find((frame) => frame.file === moduleId)?.line
+  if (parsed !== undefined || typeof error.stack !== "string") return parsed
+  const raw = new RegExp(`[\\s(](?:file://)?${escaped(moduleId)}:(\\d+):\\d+`).exec(error.stack)
+  return raw ? Number(raw[1]) : undefined
 }
 
 function escaped(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
 
+export function messageLine(message: string, fileName: string): number | null {
+  const named = new RegExp(`(?:^|[\\s/[(])${escaped(fileName)}:(\\d+)`, "m").exec(stripVTControlCharacters(message))
+  return named ? Number(named[1]) : null
+}
+
 function loadLine(error: SerializedError, module: TestModule): number | null {
-  const name = module.moduleId.split("/").pop() ?? ""
-  const named = new RegExp(`${escaped(name)}:(\\d+)`).exec(stripVTControlCharacters(error.message))
-  return named ? Number(named[1]) : (frameLine(error, module.moduleId) ?? null)
+  const fileName = module.moduleId.split("/").pop() ?? ""
+  return messageLine(error.message, fileName) ?? frameLine(error, module.moduleId) ?? null
 }
 
 export class KoanReporter implements Reporter {
@@ -64,8 +78,8 @@ export class KoanReporter implements Reporter {
     for (const module of modules) {
       const path = this.relative(module.moduleId)
       const tests = [...module.children.allTests()]
-      const [loadError] = module.errors()
-      if (loadError !== undefined && tests.length === 0) failures.push(this.loadFailure(loadError, module, path))
+      const [moduleError] = module.errors()
+      if (moduleError !== undefined) failures.push(this.moduleFailure(moduleError, module, path, tests.length === 0))
       for (const test of tests) {
         const outcome = this.outcome(test, path)
         if (outcome === null) continue
@@ -73,22 +87,29 @@ export class KoanReporter implements Reporter {
         if (outcome.failed !== null) failures.push(outcome.failed)
       }
     }
-    const first = [...failures].sort((a, b) => byPlace(a.failure, b.failure))[0] ?? null
-    const lines = unhandledErrors.map((error) => `${errorName(error)}: ${firstLine(error.message)}`)
-    if (modules.length > 0) {
-      const passed = finished.filter((done) => done.kind === "ok").length
-      const footer = render(passed, total(dirname(modules[0].moduleId)), finished.length, first?.failure ?? null)
-      if (footer !== "") lines.push(footer)
+    const located = unhandledErrors.map((error) => this.unhandledFailure(error, modules))
+    const unlocated = unhandledErrors.filter((_error, index) => located[index] === null)
+    const all = [...failures, ...located.filter((failed): failed is Failed => failed !== null)]
+    const first = all.sort((a, b) => byPlace(a.failure, b.failure))[0] ?? null
+    const lines = [...unlocated.map(describe), ...footerLines(modules, finished, first, unlocated.length > 0)]
+    if (verifying()) lines.push(...verifyLines(finished, first, unlocated))
+    this.write(`\n${lines.join("\n")}\n`)
+  }
+
+  private unhandledFailure(error: SerializedError, modules: ReadonlyArray<TestModule>): Failed | null {
+    for (const module of modules) {
+      const line = frameLine(error, module.moduleId)
+      if (line !== undefined) return { kind: errorName(error), failure: foreign(error, this.relative(module.moduleId), line) }
     }
-    if (verifying()) lines.push(...verifyLines(finished, first, unhandledErrors))
-    if (lines.length > 0) this.write(`\n${lines.join("\n")}\n`)
+    return null
   }
 
   private relative(moduleId: string): string {
     return relative(process.cwd(), moduleId).split(sep).join("/")
   }
 
-  private loadFailure(error: SerializedError, module: TestModule, path: string): Failed {
+  private moduleFailure(error: SerializedError, module: TestModule, path: string, unloaded: boolean): Failed {
+    if (!unloaded) return { kind: errorName(error), failure: foreign(error, path, frameLine(error, module.moduleId) ?? null) }
     const failure = {
       path,
       line: loadLine(error, module),
@@ -115,6 +136,26 @@ export class KoanReporter implements Reporter {
     }
     return { finished: { kind, path, line }, failed: { kind, failure } }
   }
+}
+
+const describe = (error: SerializedError): string => `${errorName(error)}: ${firstLine(error.message)}`
+
+function foreign(error: SerializedError, path: string, line: number | null): Failure {
+  return { path, line, meditation: null, message: describe(error), write: null }
+}
+
+function footerLines(
+  modules: ReadonlyArray<TestModule>,
+  finished: Finished[],
+  first: Failed | null,
+  errored: boolean,
+): string[] {
+  if (modules.length === 0) return errored ? [] : [NO_MATCH]
+  const passed = finished.filter((done) => done.kind === "ok").length
+  const koans = total(dirname(modules[0].moduleId))
+  if (first === null && errored) return [`${passed} of ${koans} koans answered.`]
+  const footer = render(passed, koans, finished.length, first?.failure ?? null)
+  return footer === "" ? [] : [footer]
 }
 
 function verifyLines(finished: Finished[], first: Failed | null, unhandled: ReadonlyArray<SerializedError>): string[] {

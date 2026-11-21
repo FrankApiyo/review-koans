@@ -15,6 +15,7 @@ const BROKEN_DIR = "verify/fixtures/koan_syntax_error"
 const BROKEN = `${BROKEN_DIR}/01_broken_test.ts`
 const VALUE = "Replace __ with the value that makes this true."
 const VERIFY = { KOANS_VERIFY: "1" }
+const NO_MATCH = "No koan file matches. Check the path and the file name, for example: npx vitest run koans/01_equality_test.ts"
 
 async function learnerBail(verify: string | undefined): Promise<unknown> {
   vi.resetModules()
@@ -107,9 +108,34 @@ test("a koan file with a syntax error is named, not skipped", () => {
     `KOANS-TEST ok ${BROKEN_DIR}/02_after_test.ts:3`,
     `KOANS-RESULT LoadError ${BROKEN}:8`,
   ])
-  expect(done.output).toMatch(
-    new RegExp(`\\n${BROKEN} does not load: [^\\n]+\\n${MASTER}\\nMeditate on ${BROKEN}:8\\n1 of 3 koans answered\\.\\n`),
+  expect(done.output).toContain(
+    `\n${BROKEN} does not load: [PARSE_ERROR] Unexpected token\n${MASTER}\nMeditate on ${BROKEN}:8\n1 of 3 koans answered.\n`,
   )
+})
+
+test("a module error beside passing koans is a failure, not enlightenment", () => {
+  const file = "verify/fixtures/module_error/01_after_all_test.ts"
+  const done = runKoans("verify/fixtures/module_error", [], VERIFY)
+  expect(done.code).toBe(1)
+  expect(done.output).not.toContain(ENLIGHTENMENT)
+  expect(done.output).toContain(`\nRangeError: cleanup failed\n${MASTER}\nMeditate on ${file}:4\n1 of 1 koans answered.\n`)
+  expect(koansLines(done.output)).toEqual([`KOANS-TEST ok ${file}:7`, `KOANS-RESULT RangeError ${file}:4`])
+})
+
+test("an unhandled error is a failure, not enlightenment", () => {
+  const file = "verify/fixtures/unhandled_error/01_stray_test.ts"
+  const done = runKoans("verify/fixtures/unhandled_error", [], VERIFY)
+  expect(done.code).toBe(1)
+  expect(done.output).not.toContain(ENLIGHTENMENT)
+  expect(done.output.split("\n").filter((line) => line === "TypeError: stray")).toHaveLength(1)
+  expect(done.output).toContain(`\nTypeError: stray\n${MASTER}\nMeditate on ${file}:4\n1 of 1 koans answered.\n`)
+  expect(koansLines(done.output)).toEqual([`KOANS-TEST ok ${file}:3`, `KOANS-RESULT TypeError ${file}:4`])
+})
+
+test("a filter that matches no koan file says so", () => {
+  const done = runKoans(SINGLE, [`${SINGLE}/09_typo_test.ts`])
+  expect(done.code).toBe(1)
+  expect(done.output.trim()).toBe(NO_MATCH)
 })
 
 test("#koans resolves from a nested variant folder", () => {
@@ -124,4 +150,13 @@ test("#koans resolves from a nested variant folder", () => {
   } finally {
     rmSync(join(TYPESCRIPT_DIR, "_variants/verify-nested"), { recursive: true, force: true })
   }
+})
+
+test("an unhandled error with no koan frame still ends the footer without enlightenment", () => {
+  const file = "verify/fixtures/unhandled_value/01_value_test.ts"
+  const done = runKoans("verify/fixtures/unhandled_value", [], VERIFY)
+  expect(done.code).toBe(1)
+  expect(done.output).not.toContain(ENLIGHTENMENT)
+  expect(done.output).toContain("\nError: stray value\n1 of 1 koans answered.\n")
+  expect(koansLines(done.output)).toEqual([`KOANS-TEST ok ${file}:3`, "KOANS-RESULT Error"])
 })

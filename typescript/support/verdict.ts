@@ -14,7 +14,7 @@ export class Verdict extends Error {
   }
 }
 
-const short = (text: string): string => createHash("sha256").update(text, "utf8").digest("hex").slice(0, 10)
+const short = (data: string | Buffer): string => createHash("sha256").update(data).digest("hex").slice(0, 10)
 
 export function digest(file: string, answer: number | "fine"): string {
   return short(`${file}:${answer}`)
@@ -30,7 +30,7 @@ const isLine = (answer: unknown): answer is number =>
 
 function changed(path: string, sourceDigest: string): boolean {
   try {
-    return short(readFileSync(path, "utf8")) !== sourceDigest
+    return short(readFileSync(path)) !== sourceDigest
   } catch {
     return true
   }

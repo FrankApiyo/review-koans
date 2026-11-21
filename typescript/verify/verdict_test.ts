@@ -89,6 +89,14 @@ test("a wrong line on an edited review adds the moved-lines note", () => {
   )
 })
 
+test("the source digest is over the file's bytes, not its decoded text", () => {
+  const bytes = Buffer.concat([Buffer.from([0xff]), Buffer.from(CART)])
+  writeFileSync(join(root, PATH), bytes)
+  const digestOfBytes = createHash("sha256").update(bytes).digest("hex").slice(0, 10)
+  expect(digestOfBytes).not.toBe(sha(bytes.toString("utf8")))
+  expect(refusal(2, BUGGY, digestOfBytes)).toBe(`Not that line. Look again at ${PATH}.`)
+})
+
 test("a missing review counts as changed", () => {
   rmSync(join(root, PATH))
   expect(refusal(2, BUGGY)).toMatch(/git diff koans\/review\/cart\.ts shows how\.$/)
