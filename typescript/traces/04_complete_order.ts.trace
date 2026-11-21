@@ -1,0 +1,12 @@
+exit 1
+--- stdout
+order o-17 complete
+--- stderr
+traces/04_complete_order.ts:4
+    throw new Error(`invalid recipient: ${email}`)
+          ^
+
+Error: invalid recipient: ann.example.com
+    at sendReceipt (traces/04_complete_order.ts:4:11)
+
+Node.js v25.9.0

@@ -10,3 +10,4 @@ python/source/review/04_poll.py | await asyncio.sleep(interval) | interval is 0 
 python/checks/04_with_retry_checks.py | def call_later(delay, callback, *args, context=None): | a stand-in on the case's own loop: records the delay and schedules the callback at once, so no timer runs
 python/checks/04_with_retry_checks.py | loop.call_later, loop.run_in_executor = call_later, run_in_executor | installs the stand-ins on the case's own loop, which run_checks closes after the case
 python/checks/04_with_retry_checks.py | elif value is time.sleep: | never calls it: swaps a review's own imported sleep for the check's stand-in
+typescript/source/04_async_ordering_test.ts | setTimeout(() => log.push("B"), 0) | runs under the fake timers every koan gets

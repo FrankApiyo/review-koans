@@ -1,11 +1,14 @@
+https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach
 https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort
 https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/toSorted
 https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/bind
 https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify
 https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/isFinite
+https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/allSettled
 https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/parseInt
 https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Equality
 https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax
+https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/await
 https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/this
 https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/let
 https://docs.python.org/3.13/faq/programming.html
@@ -38,6 +41,7 @@ https://hexdocs.pm/phoenix_live_view/1.1.33/security-model.html
 https://hexdocs.pm/phoenix_pubsub/2.4.1/Phoenix.PubSub.html
 https://nodejs.org/docs/latest-v24.x/api/events.html
 https://nodejs.org/docs/latest-v24.x/api/globals.html
+https://nodejs.org/docs/latest-v24.x/api/process.html
 https://www.erlang.org/doc/apps/erts/erlang.html
 https://www.erlang.org/doc/apps/erts/match_spec.html
 https://www.erlang.org/doc/apps/stdlib/ets.html
