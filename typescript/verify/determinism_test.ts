@@ -11,6 +11,7 @@ const MACHINES: Record<string, string>[] = [
   { TZ: "Pacific/Auckland", LANG: "de_DE.UTF-8", LC_ALL: "de_DE.UTF-8" },
   { TZ: "Asia/Kolkata", LANG: "ja_JP.UTF-8", LC_ALL: "ja_JP.UTF-8" },
   { TZ: "UTC", LANG: "C", LC_ALL: "C" },
+  { TZ: "Europe/Stockholm", LANG: "sv_SE.UTF-8", LC_ALL: "sv_SE.UTF-8" },
 ]
 
 function expectKoanPasses(file: string, dir: string, meditation: string): void {

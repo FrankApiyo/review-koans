@@ -13,7 +13,7 @@ export default defineConfig({
     reporters: [new KoanReporter()],
     includeTaskLocation: true,
     setupFiles: ["./support/setup.ts"],
-    env: { TZ: "America/New_York" },
+    env: { TZ: "America/New_York", LANG: "en_US.UTF-8", LC_ALL: "en_US.UTF-8" },
     testTimeout: 30_000,
     hookTimeout: 30_000,
     onUnhandledError: (error) => (error as { koansClaimed?: unknown }).koansClaimed !== true,

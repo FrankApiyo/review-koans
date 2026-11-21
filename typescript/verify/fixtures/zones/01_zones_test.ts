@@ -46,3 +46,8 @@ test("Numbers, sorting and ISO dates ignore the machine locale.", () => {
   expect(["b", "ä", "a"].sort()).toEqual(["a", "b", "ä"])
   expect(new Date("2024-03-10T12:00:00Z").toISOString()).toBe("2024-03-10T12:00:00.000Z")
 })
+
+test("Collation follows the pinned locale, not the machine's.", () => {
+  expect(new Intl.Collator().resolvedOptions().locale).toBe("en-US")
+  expect("ä".localeCompare("z")).toBe(-1)
+})

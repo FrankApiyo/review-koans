@@ -77,3 +77,15 @@ test("A dynamically imported net is refused.", async () => {
 test("A raw TCP binding is refused.", () => {
   ;(process as unknown as { binding(name: string): unknown }).binding("tcp_wrap")
 })
+
+test("A TCP listen is refused.", () => {
+  net.createServer().listen(0)
+})
+
+test("An HTTP server listen is refused.", () => {
+  http.createServer().listen(0)
+})
+
+test("A UDP bind is refused.", () => {
+  dgram.createSocket("udp4").bind(0)
+})

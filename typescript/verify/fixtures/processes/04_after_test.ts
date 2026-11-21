@@ -1,10 +1,10 @@
 import { spawnSync } from "node:child_process"
 import { writeFileSync } from "node:fs"
 import { afterAll, test } from "vitest"
-import { marker } from "./marker.ts"
+import { attempt, marker } from "./marker.ts"
 
 afterAll(() => {
-  writeFileSync(marker("after-all"), String(spawnSync("true").status))
+  writeFileSync(marker("after-all"), attempt())
 })
 
 test("A koan that throws the refusal.", () => {

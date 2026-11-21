@@ -1,10 +1,7 @@
-import { spawnSync } from "node:child_process"
-import * as childProcess from "node:child_process"
 import { mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { expect, test } from "vitest"
-import { armGuard, disarmGuard, installGuard } from "../support/guard.ts"
 import { MASTER, runKoans } from "./child.ts"
 import { type Koan, koanAt, koansIn, koansLines } from "./koans.ts"
 
@@ -15,6 +12,10 @@ const SPAWNS = `${PROCESSES_DIR}/01_spawn_test.ts`
 const SYNC = `${PROCESSES_DIR}/02_sync_test.ts`
 const NATIVE = `${PROCESSES_DIR}/03_native_test.ts`
 const AFTER = `${PROCESSES_DIR}/04_after_test.ts`
+const TOP_LEVEL = `${PROCESSES_DIR}/05_top_level_test.ts`
+const REVIEW_IMPORT = `${PROCESSES_DIR}/06_review_import_test.ts`
+const LATE = `${PROCESSES_DIR}/07_late_test.ts`
+const REGISTER = `${PROCESSES_DIR}/08_register_test.ts`
 const OFFLINE_MESSAGE = "Error: koans are offline"
 const PROCESS_MESSAGE = "Error: koans start no processes"
 
@@ -87,27 +88,45 @@ test("the child process really did not run", () => {
   })
 })
 
-test("the guard is off outside a koan, even after a koan throws", () => {
+test("the guard stays on after the koans, even after a koan throws", () => {
   withMarkers((dir) => {
     const done = runKoans(PROCESSES_DIR, [AFTER], { KOANS_VERIFY: "1", KOANS_MARKER_DIR: dir })
     expect(koansLines(done.output)[0]).toBe(`KOANS-TEST Error ${AFTER}:${koanAt(AFTER, "A koan that throws the refusal.").line}`)
     expect(done.output).toContain(PROCESS_MESSAGE)
-    expect(readFileSync(join(dir, "after-all"), "utf8")).toBe("0")
+    expect(readFileSync(join(dir, "after-all"), "utf8")).toBe("koans start no processes")
   })
 })
 
-test("installGuard is idempotent and refuses only while armed", () => {
-  installGuard()
-  const guarded = childProcess.spawnSync
-  installGuard()
-  expect(childProcess.spawnSync).toBe(guarded)
-  expect(spawnSync("true").status).toBe(0)
-  armGuard()
-  try {
-    expect(() => spawnSync("true")).toThrow(new Error("koans start no processes"))
-    expect(() => fetch("http://127.0.0.1:9/")).toThrow(new Error("koans are offline"))
-  } finally {
-    disarmGuard()
-  }
-  expect(spawnSync("true").status).toBe(0)
+test("a top-level spawn in a koan file is a LoadError", () => {
+  withMarkers((dir) => {
+    const done = runKoans(PROCESSES_DIR, [TOP_LEVEL], { KOANS_VERIFY: "1", KOANS_MARKER_DIR: dir })
+    expect(koansLines(done.output), done.output).toEqual([`KOANS-RESULT LoadError ${TOP_LEVEL}:5`])
+    expect(done.output).toContain(`${TOP_LEVEL} does not load: koans start no processes`)
+    expect(readdirSync(dir)).toEqual([])
+  })
+})
+
+test("a review that spawns when imported is a LoadError", () => {
+  withMarkers((dir) => {
+    const done = runKoans(PROCESSES_DIR, [REVIEW_IMPORT], { KOANS_VERIFY: "1", KOANS_MARKER_DIR: dir })
+    expect(koansLines(done.output), done.output).toEqual([`KOANS-RESULT LoadError ${REVIEW_IMPORT}:2`])
+    expect(done.output).toContain(`${REVIEW_IMPORT} does not load: koans start no processes`)
+    expect(readdirSync(dir)).toEqual([])
+  })
+})
+
+test("a callback that fires after the last koan is refused", () => {
+  withMarkers((dir) => {
+    const done = runKoans(PROCESSES_DIR, [LATE], { KOANS_VERIFY: "1", KOANS_MARKER_DIR: dir })
+    expect(koansLines(done.output)[0], done.output).toBe(`KOANS-TEST ok ${LATE}:${koansIn(LATE)[0]?.line}`)
+    expect(readFileSync(join(dir, "late"), "utf8")).toBe("koans start no processes")
+  })
+})
+
+test("module.register is refused, however node:module is imported", () => {
+  withMarkers((dir) => {
+    expectAllRefused(PROCESSES_DIR, REGISTER, PROCESS_MESSAGE, { KOANS_MARKER_DIR: dir })
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 500)
+    expect(readdirSync(dir)).toEqual([])
+  })
 })
