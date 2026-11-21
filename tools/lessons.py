@@ -203,17 +203,24 @@ def section_html(track: str, number: str, name: str, lesson: str) -> str:
     )
 
 
+TRACK_NAMES = {"typescript": "TypeScript"}
+
+
+def track_name(track: str) -> str:
+    return TRACK_NAMES.get(track, track.capitalize())
+
+
 def track_html(root: Path, track: str) -> str:
     articles = "\n".join(
         section_html(track, number, name, lesson) for number, name, lesson in chapters(root, track)
     )
-    return f'<section id="{track}">\n<h2>{escape(track.capitalize())}</h2>\n{articles}</section>\n'
+    return f'<section id="{track}">\n<h2>{escape(track_name(track))}</h2>\n{articles}</section>\n'
 
 
 def build(root: Path = ROOT) -> str:
     """The whole page, the same text on every run."""
     tracks = [track for track in DIALECTS if (root / track / "source").is_dir()]
-    nav = "".join(f'<a href="#{track}">{escape(track.capitalize())}</a>' for track in tracks)
+    nav = "".join(f'<a href="#{track}">{escape(track_name(track))}</a>' for track in tracks)
     sections = "\n".join(track_html(root, track) for track in tracks)
     return (
         "<!doctype html>\n"
