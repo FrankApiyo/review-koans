@@ -14,7 +14,7 @@ const leadingZeros = (review: any): void => {
 }
 
 export const CASES = [
-  twin("a single id", oneId),
+  twin("one id comes back as its number", oneId),
   exploit("every id after the first is read in base ten", severalIds),
   exploit("ids with a leading zero are read in base ten", leadingZeros),
 ]

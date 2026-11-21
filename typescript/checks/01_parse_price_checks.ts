@@ -6,6 +6,10 @@ const ordinaryPrices = (review: any): void => {
   assert.equal(review.parsePrice("0"), 0)
 }
 
+const paddedPrice = (review: any): void => {
+  assert.equal(review.parsePrice(" 12.50 "), 12.5)
+}
+
 const word = (review: any): void => {
   assert.throws(() => review.parsePrice("abc"), RangeError)
 }
@@ -29,6 +33,7 @@ const infinity = (review: any): void => {
 
 export const CASES = [
   twin("ordinary prices, zero included", ordinaryPrices),
+  twin("spaces around a price are ignored", paddedPrice),
   twin("a word is not a price", word),
   twin("a number followed by other text is not a price", numberThenText),
   exploit("empty text is not a price", emptyText),

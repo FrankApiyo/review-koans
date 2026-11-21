@@ -22,6 +22,6 @@ const inputUnchanged = (review: any): void => {
 export const CASES = [
   twin("no scores", noScores),
   exploit("scores come back lowest first", singleDigits),
-  exploit("scores with different numbers of digits", mixedDigits),
+  exploit("scores are ordered by numeric value, not as text", mixedDigits),
   exploit("the caller's list is left as it was", inputUnchanged),
 ]

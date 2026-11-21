@@ -13,6 +13,7 @@ const withCents = (review: any): void => {
 const productJustUnder = (review: any): void => {
   assert.equal(review.toCents(19.99), 1999)
   assert.equal(review.toCents(0.29), 29)
+  assert.equal(review.toCents(262144.1), 26214410)
 }
 
 const everyCent = (review: any): void => {
