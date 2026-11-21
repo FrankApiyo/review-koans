@@ -32,10 +32,15 @@ const callFromCallback = (review: any): void => {
   assert.deepEqual(inner, [["a"], ["a"]])
 }
 
+const callFromCallbackOnLaterId = (review: any): void => {
+  assert.deepEqual(review.dedupe(["a", "b"], () => review.dedupe(["b"])), ["a", "b"])
+}
+
 export const CASES = [
   twin("repeats within one list are dropped, first seen kept", repeatsDropped),
   twin("the callback runs once for each id kept", callbackPerKeptId),
   exploit("a second call is not affected by the first", secondCall),
   exploit("a call after a callback threw starts fresh", afterThrowingCallback),
   exploit("a call made from the callback and the call around it each get their own result", callFromCallback),
+  exploit("a call made from the callback does not change what the outer call returns", callFromCallbackOnLaterId),
 ]
