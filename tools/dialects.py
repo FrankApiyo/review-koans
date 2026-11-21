@@ -280,7 +280,7 @@ TYPESCRIPT = Dialect(
     lesson=_typescript_lesson,
     koan_head=re.compile(r'^test\("'),
     meditation=_typescript_meditation,
-    top_level_await=re.compile(r"^(?![\s/*]).*?\bawait\b"),
+    top_level_await=re.compile(r"^(?:await\b|for\s+await\b|(?:export\s+)?(?:const|let|var)\s[^=]*=\s*await\b)"),
 )
 
 DIALECTS: dict[str, Dialect] = {ELIXIR.name: ELIXIR, PYTHON.name: PYTHON, TYPESCRIPT.name: TYPESCRIPT}

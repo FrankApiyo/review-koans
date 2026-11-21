@@ -1018,6 +1018,19 @@ def test_typescript_review_refuses_top_level_await(line):
         render_review("review/f.ts", src, TYPESCRIPT)
 
 
+@pytest.mark.parametrize(
+    "line",
+    [
+        "export async function f() { return await g() }",
+        "const f = async () => await g()",
+        "const x = 1 // await later",
+        'const s = "await me"',
+    ],
+)
+def test_typescript_review_allows_await_that_is_not_a_top_level_statement(line):
+    render_review("review/f.ts", f"{line}\n" + TS_GUARD_REVIEW, TYPESCRIPT)
+
+
 def test_typescript_review_allows_await_inside_a_function():
     src = "export async function f() {\n  // >>> guard\n  return await g()\n  // === wrong: partial — nothing\n  // <<<\n}\n"
     render_review("review/f.ts", src, TYPESCRIPT)
