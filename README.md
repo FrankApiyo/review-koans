@@ -347,7 +347,7 @@ npx vitest run koans/<file>
 npx vitest run koans/<file>:<line>
 ```
 
-`<file>` is a name such as `01_equality_numbers_and_sorting_test.ts`. `<line>` is the line of the koan's `test(` call, and only that koan runs.
+`<file>` is a name such as `01_equality_numbers_and_sorting_test.ts`. `<line>` is the line of the koan's `test(` call, and only that koan runs. The line after `Meditate on` in the footer is the blank, not the `test(` line, which is usually one line above it.
 
 ### Running from Neovim
 
