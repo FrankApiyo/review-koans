@@ -16,7 +16,6 @@ ROOT = Path(__file__).resolve().parent.parent
 CHAPTER_VARIABLE = "REVIEW_KOANS_CHAPTER"
 CHAPTER = re.compile(r"^(\d\d)_")
 KOAN_START = ELIXIR.koan_head
-KOAN_HEAD = re.compile(r'^\s*koan\s+"(?P<meditation>(?:[^"\\]|\\.)*)"\s+do\s*$')
 RENDERED_VERDICT = re.compile(
     r'verdict\("(?P<file>[^"\n]+)", (?P<answer>[^,\n]+), "(?P<digests>[^"\n]*)", "(?P<source>[^"\n]*)"\)'
 )

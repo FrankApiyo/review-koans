@@ -16,9 +16,9 @@ A common mistake: patching the symptom. `errors = errors or []` drops the caller
 copying an argument the caller shares on purpose breaks callers that rely on it; a shallow
 copy of nested data still shares the inner dict. `self.items = self.items + [sku]` happens to
 work but leaves the shared list in place for the next method that appends, and
-`self.items += [sku]` is not that rebind: `+=` extends the shared list in place. Give each
-instance its own list in `__init__`. A traceback can miss the cause: in the `01_note` trace, the field
-at fault is on line 7, which no frame prints. Read the error, then find the field it names.
+`self.items += [sku]` is not that rebind: `+=` extends the shared list in place. A
+traceback can miss the cause: in the `01_note` trace, the field at fault is on line 7, which no
+frame prints. Read the error, then find the field it names.
 
 Read more: https://docs.python.org/3.13/faq/programming.html,
 https://docs.python.org/3.13/library/copy.html,
