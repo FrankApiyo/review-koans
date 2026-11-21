@@ -56,3 +56,23 @@ jobs:
       - uses: astral-sh/setup-uv@v10.3.3
       - run: uv venv --python ${{ matrix.python }} && uv pip install pytest==9.2.0
       - run: .venv/bin/pytest tests/test_python.py tests/test_chapter00_python.py
+
+  typescript:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["24", "25"]
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: typescript/package-lock.json
+      - run: cd typescript && npm ci
+      - uses: astral-sh/setup-uv@v10.3.3
+      - run: uv venv --python 3.13 && uv pip install pytest==9.2.0
+      - run: .venv/bin/pytest tests/test_typescript.py tests/test_chapter00_typescript.py
