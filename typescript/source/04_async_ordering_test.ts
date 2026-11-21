@@ -19,10 +19,11 @@ and who hears if it rejects. If nobody does, the function reports success before
 done, and the failure arrives later, with the caller gone from the stack.
 
 A common mistake: putting `await` in front of something that is not a promise, such as an array
-of promises or the result of `forEach`, which waits for nothing; catching each failure as `null`,
-which reports a failure as a success; wrapping the whole batch in one `try`, which makes one
-failure count for all. In the order trace the stack shows only the line that threw; the fault
-is line 9, which started the promise and never waited for it, and line 9 is not in the stack.
+of promises or the result of `forEach`, which waits for nothing; catching each failure as `null`
+and still counting the item as done; wrapping the whole batch in one `try`, which makes one
+failure count for all; sleeping for a fixed time instead of waiting for the promise. In the order
+trace the stack shows only the line that threw; the fault is line 9, which started the promise
+and never waited for it, and line 9 is not in the stack.
 
 Read more: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/await,
 https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach,
