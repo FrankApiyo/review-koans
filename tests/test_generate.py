@@ -6,7 +6,7 @@ import sys
 import pytest
 
 import harness
-from dialects import DIALECTS, ELIXIR, PYTHON, dialect_for
+from dialects import DIALECTS, ELIXIR, PYTHON, TS_FUNCTION_HEAD, TYPESCRIPT, dialect_for
 from generate import (
     ROOT,
     Also,
@@ -808,3 +808,158 @@ def test_elixir_koan_helpers_are_unchanged():
     assert harness.enclosing_koan(text, 7) == 6
     assert harness.koan_body(text, 2) == "\n".join(text.splitlines()[1:5])
     assert harness.KOAN_START is ELIXIR.koan_head
+
+
+# TypeScript dialect.
+
+TYPESCRIPT_ANSWERS = ['")"', "')'", '"a\\")"', "[1, [2, 3]]", '["traces/00_x.ts", 4]', "-0", "{ a: (1) }"]
+
+
+@pytest.mark.parametrize("answer", TYPESCRIPT_ANSWERS)
+def test_typescript_value_blank_skips_parens_in_strings(answer):
+    src = f"expect(x).toEqual(_a({answer}))\n"
+    assert render_values("t_test.ts", src, TYPESCRIPT, solved=False) == "expect(x).toEqual(__)\n"
+    assert render_values("t_test.ts", src, TYPESCRIPT, solved=True) == f"expect(x).toEqual({answer})\n"
+
+
+@pytest.mark.parametrize("answer", ["`a`", "/a/", "1 / 3", "1 // x\n"])
+def test_typescript_template_regex_division_and_comment_inside_answer_are_refused(answer):
+    with pytest.raises(GenerationError, match=r"t_test\.ts:1: (template literal|slash) inside _a\("):
+        render_values("t_test.ts", f"expect(x).toEqual(_a({answer}))\n", TYPESCRIPT, solved=False)
+
+
+def test_typescript_unclosed_answer_names_its_line():
+    with pytest.raises(GenerationError, match=r"t_test\.ts:2: unclosed _a\("):
+        render_values("t_test.ts", "a\nexpect(x).toEqual(_a(1\n", TYPESCRIPT, solved=False)
+
+
+def test_typescript_code_block_renders_a_call_blank():
+    src = "  // >>> answer\n  x = 1\n  // <<<\n"
+    assert render_code_blocks("t_test.ts", src, TYPESCRIPT, solved=False) == "  __blank()\n"
+    assert render_code_blocks("t_test.ts", src, TYPESCRIPT, solved=True) == "  x = 1\n"
+
+
+TS_GUARD_REVIEW = "export function f() {\n  // >>> guard\n  return 1\n  // === wrong: partial — nothing\n  // <<<\n}\n"
+
+
+def test_typescript_fine_verdict_renders_the_fine_string():
+    reviews = {"f.ts": render_review("review/f.ts", TS_GUARD_REVIEW, TYPESCRIPT)}
+    koans, solutions = render_test("t_test.ts", 'verdict("f.ts", _a("fine"))\n', TYPESCRIPT, reviews)
+    fine, sha = digest("f.ts", "fine"), reviews["f.ts"].source_digest
+    assert koans == f'verdict("f.ts", __, "{fine}", "{sha}")\n'
+    assert solutions == f'verdict("f.ts", "fine", "{fine}", "{sha}")\n'
+
+
+def ts_fix(indent, fixed="x = 2"):
+    return (
+        f"{indent}// >>> fix\n{indent}// === fixed\n{indent}{fixed}\n"
+        f"{indent}// === wrong: refuses — rejects\n{indent}throw new Error()\n"
+        f"{indent}// === wrong: partial — half\n{indent}x = 3\n{indent}// <<<\n"
+    )
+
+
+def test_typescript_fix_markers_use_double_slash():
+    src = "export function f(x: number) {\n  // >>> fix\n  x = 1\n" + ts_fix("  ")[len("  // >>> fix\n") :] + "  return x\n}\n"
+    review = render_review("o.ts", src, TYPESCRIPT)
+    [block] = review.blocks
+    assert (block.kind, block.buggy, block.fixed) == ("fix", ("  x = 1",), ("  x = 2",))
+    assert "//" not in review.koans
+    assert review.accepted == {2}
+
+
+def test_typescript_omission_accepts_line_before_after_and_function_head():
+    src = "export async function f(x: number) {\n  const a = 1\n" + ts_fix("  ") + "  return a\n}\n"
+    assert render_review("o.ts", src, TYPESCRIPT).accepted == {2, 3, 1}
+
+
+def test_typescript_omission_in_a_method_accepts_the_method_head():
+    src = "export class C {\n  async m(x: number): Promise<number> {\n    const a = 1\n" + ts_fix("    ") + "    return a\n  }\n}\n"
+    assert render_review("o.ts", src, TYPESCRIPT).accepted == {3, 4, 2}
+
+
+def test_typescript_omission_in_an_arrow_const_accepts_the_const_line():
+    src = "export const f = async (x: number) => {\n  const a = 1\n" + ts_fix("  ") + "  return a\n}\n"
+    assert render_review("o.ts", src, TYPESCRIPT).accepted == {2, 3, 1}
+
+
+def test_typescript_class_level_omission_accepts_the_class_head():
+    src = (
+        "export class C {\n  a() {\n    return 1\n  }\n\n"
+        + ts_fix("  ")
+        + "\n  b() {\n    return 2\n  }\n}\n"
+    )
+    assert render_review("o.ts", src, TYPESCRIPT).accepted == {4, 7, 1}
+
+
+def test_typescript_indented_calls_are_not_function_heads():
+    assert not TS_FUNCTION_HEAD.match("    run(job)")
+    assert not TS_FUNCTION_HEAD.match("    super(x)")
+    src = "export class W extends B {\n  constructor(job: Job) {\n    super(job)\n    run(job)\n" + ts_fix("      ") + "  }\n}\n"
+    assert render_review("o.ts", src, TYPESCRIPT).accepted == {4, 5, 2}
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "function f(x) {",
+        "export default async function f() {",
+        "export const f = (x: number) => {",
+        "let g = async x =>",
+        "  get total(): number {",
+        "  handle = async (e: Event) => {",
+        "  static make(x: number) {",
+    ],
+)
+def test_typescript_function_heads(line):
+    assert TS_FUNCTION_HEAD.match(line)
+
+
+@pytest.mark.parametrize("line", ["  if (x) {", "  for (const a of b) {", "  } catch (e) {", "  return (x) => {", "  while (x) {"])
+def test_typescript_control_flow_is_not_a_function_head(line):
+    assert not TS_FUNCTION_HEAD.match(line)
+
+
+def test_typescript_lesson_is_the_leading_block_comment():
+    text = '/*\nLook for: x\n  indented\n*/\nimport { test } from "vitest"\n'
+    assert TYPESCRIPT.lesson(text) == "Look for: x\n  indented"
+    assert TYPESCRIPT.lesson('import { test } from "vitest"\n/*\nx\n*/\n') is None
+
+
+def test_typescript_meditation_unescapes_quotes():
+    text = 'test("Write \\"fine\\", or x.", () => {\n  verdict()\n})\n\ntest("b", () => {\n  y()\n})\n'
+    assert harness.meditation(text, 1, TYPESCRIPT) == 'Write "fine", or x.'
+    assert harness.meditation(text, 2, TYPESCRIPT) is None
+    assert harness.koan_lines(text, TYPESCRIPT) == [1, 5]
+    assert harness.enclosing_koan(text, 6, TYPESCRIPT) == 5
+
+
+TYPESCRIPT_TRACK = {
+    "source/01_a_test.ts": 'test("a", () => {\n  expect(1).toEqual(_a(1))\n})\n',
+    "source/review/01_r.ts": TS_GUARD_REVIEW,
+    "source/01_b_test.ts": 'test("b", () => {\n  verdict("01_r.ts", _a("fine"))\n})\n',
+}
+
+
+def test_typescript_track_generates_and_checks_clean(tmp_path, capsys):
+    for rel, content in TYPESCRIPT_TRACK.items():
+        path = tmp_path / "typescript" / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+    assert main([], root=tmp_path) == 0
+    koan = (tmp_path / "typescript/koans/01_a_test.ts").read_text()
+    assert koan == 'test("a", () => {\n  expect(1).toEqual(__)\n})\n'
+    assert '"fine"' in (tmp_path / "typescript/solutions/01_b_test.ts").read_text()
+    capsys.readouterr()
+    assert main(["--check", "typescript"], root=tmp_path) == 0
+    assert capsys.readouterr().out == ""
+
+
+def test_python_and_elixir_dialects_are_unchanged():
+    assert list(DIALECTS) == ["elixir", "python", "typescript"]
+    assert DIALECTS["python"] is PYTHON and DIALECTS["elixir"] is ELIXIR
+    shape = lambda d: (d.comment, d.test_glob, d.review_glob, d.value_blank, d.fine, d.code_blank("t"))
+    assert shape(ELIXIR) == ("#", "*_test.exs", "review/*.ex", "__", ":fine", "__()")
+    assert shape(PYTHON) == ("#", "*_test.py", "review/*.py", "__", "FINE", "__()")
+    heads = lambda d: (d.function_head.pattern, d.module_head.pattern, d.koan_head.pattern)
+    assert heads(ELIXIR) == (r"^\s*(def|defp|defmacro|defmacrop)\b", r"^\s*defmodule\b", r'^\s*koan\s+"')
+    assert heads(PYTHON) == (r"^\s*(async\s+)?def\b", r"^\s*class\b", r"^def test_\w+\(")

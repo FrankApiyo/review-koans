@@ -201,7 +201,84 @@ PYTHON = Dialect(
     meditation=_python_meditation,
 )
 
-DIALECTS: dict[str, Dialect] = {ELIXIR.name: ELIXIR, PYTHON.name: PYTHON}
+TYPESCRIPT_FORBIDDEN = re.compile(r"[`/]")
+_NOT_A_HEAD = r"(?!(?:if|for|while|switch|catch|return)\b)"
+_MODIFIERS = r"(?:(?:static|public|private|protected|override)\s+)*"
+TS_FUNCTION_HEAD = re.compile(
+    r"^\s*(export\s+)?(default\s+)?(async\s+)?function\b"
+    r"|^\s*(export\s+)?(const|let)\s+\w+\s*(:[^=]*)?=\s*(async\s*)?(\(|\w+\s*=>)"
+    rf"|^\s+{_NOT_A_HEAD}{_MODIFIERS}(async\s+)?(get\s+|set\s+)?#?\w+\s*(=\s*(async\s*)?)?\(.*(\{{|=>)\s*$"
+)
+_TYPESCRIPT_LESSON = re.compile(r"\A/\*\n(.*?)\n\*/", re.DOTALL)
+_TYPESCRIPT_MEDITATION = re.compile(r'^test\("((?:[^"\\]|\\.)*)",')
+_TYPESCRIPT_ESCAPE = re.compile(r"\\(.)")
+
+
+def _skip_typescript_string(text: str, i: int) -> int:
+    quote = text[i]
+    i += 1
+    while i < len(text):
+        if text[i] == "\\":
+            i += 2
+        elif text[i] == quote:
+            return i + 1
+        else:
+            i += 1
+    raise ValueError("unclosed _a(")
+
+
+def _typescript_value_end(text: str, start: int) -> int:
+    depth = 1
+    i = start
+    while i < len(text):
+        ch = text[i]
+        if ch == "`":
+            raise ValueError("template literal inside _a(")
+        if ch == "/":
+            raise ValueError("slash inside _a(: write the value, not a regex, division or comment")
+        if ch in "\"'":
+            i = _skip_typescript_string(text, i)
+        elif ch == "(":
+            depth += 1
+            i += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0:
+                return i
+            i += 1
+        else:
+            i += 1
+    raise ValueError("unclosed _a(")
+
+
+def _typescript_lesson(text: str) -> str | None:
+    match = _TYPESCRIPT_LESSON.search(text)
+    return textwrap.dedent(match.group(1)).strip() if match else None
+
+
+def _typescript_meditation(lines: list[str], koan_line: int) -> str | None:
+    match = _TYPESCRIPT_MEDITATION.match(lines[koan_line - 1])
+    return _TYPESCRIPT_ESCAPE.sub(r"\1", match.group(1)) if match else None
+
+
+TYPESCRIPT = Dialect(
+    name="typescript",
+    comment="//",
+    test_glob="*_test.ts",
+    review_glob="review/*.ts",
+    value_blank="__",
+    fine='"fine"',
+    code_blank=lambda _tag: "__blank()",
+    function_head=TS_FUNCTION_HEAD,
+    module_head=re.compile(r"^\s*(export\s+)?(default\s+)?class\b"),
+    find_value_end=_typescript_value_end,
+    forbidden_in_value=TYPESCRIPT_FORBIDDEN,
+    lesson=_typescript_lesson,
+    koan_head=re.compile(r'^test\("'),
+    meditation=_typescript_meditation,
+)
+
+DIALECTS: dict[str, Dialect] = {ELIXIR.name: ELIXIR, PYTHON.name: PYTHON, TYPESCRIPT.name: TYPESCRIPT}
 
 
 def dialect_for(track: str) -> Dialect:
