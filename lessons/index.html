@@ -233,9 +233,19 @@ Exercised by: koans/00_how_review_koans_work_test.py:47
 Write:        koans/review/00_discount.ts
 Exercised by: koans/00_how_review_koans_work_test.ts:44
     Fix the bug in koans/review/00_discount.ts in place. The hidden checks name what still fails.
-2 of 5 koans answered.</code></pre>
+2 of 18 koans answered.</code></pre>
 <p>The checks are readable in <code>checks/</code>, as the answers are in <code>solutions/</code>. Read them only after a real attempt; reading them first defeats the exercise.</p>
 <p>A syntax error in a koan file stops the run, and the footer names the file: fix it, then run <code>npm test</code> again. A fix that loops forever never returns; press Ctrl-C to stop the run. To start again, run <code>git checkout -- koans/</code>.</p>
+</article>
+
+<article id="typescript-01">
+<h3><small>01</small>Equality, numbers and sorting</h3>
+<p>Look for: <code>==</code> against anything but <code>null</code>; a comparison with <code>NaN</code>; <code>Number</code> on text that may be blank; <code>parseInt</code> handed straight to <code>map</code>; a price multiplied into cents and floored; <code>toFixed</code> read as a rounding rule; <code>sort()</code> with no comparator.</p>
+<p>Why it bites: none of these throw. <code>==</code> converts both sides before it compares, so a number, a boolean or a list can equal a string. <code>NaN</code> equals nothing, itself included, so <code>x === NaN</code> is always false and the branch under it never runs. <code>Number</code> reads blank text as 0 and accepts the word for infinity, so a check for <code>NaN</code> alone lets both through. <code>map</code> calls its function with the item and the item's index, and <code>parseInt</code> takes a second argument too: the radix. Most decimal fractions have no exact binary form, so a product meant to be whole cents can land a hair under the whole number, and rounding down takes a cent off. <code>toFixed</code> rounds the binary value, not the decimal you wrote. With no comparator, <code>sort</code> compares numbers as text, and it sorts the array in place.</p>
+<p>Review habit: Read for what is missing. A validation names the inputs it rejects; ask which bad inputs it never names. A function passed by name receives every argument <code>map</code> gives it, not only the one you meant. A sort with no comparator is missing its rule, and a sort on the caller's array is missing a copy.</p>
+<p class="mistake"><strong>A common mistake:</strong> swapping one check for its neighbour. <code>!value</code> treats 0 and false as blank, just as <code>==</code> did. <code>Number.parseInt</code> is the same function as <code>parseInt</code>. Rounding the dollars with <code>toFixed</code> before multiplying brings the float error back.</p>
+<p class="more">Read more</p>
+<ul class="links"><li><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Equality">https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Equality</a></li><li><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/parseInt">https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/parseInt</a></li><li><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/isFinite">https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/isFinite</a></li><li><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort">https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort</a></li></ul>
 </article>
 </section>
 <footer>Built by <code>tools/lessons.py</code> from the lessons in each track's <code>source/</code> folder. Lessons are under CC BY 4.0; see <code>LICENSE-lessons</code>.</footer>

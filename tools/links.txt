@@ -1,3 +1,7 @@
+https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort
+https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/isFinite
+https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/parseInt
+https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Equality
 https://docs.python.org/3.13/faq/programming.html
 https://docs.python.org/3.13/library/asyncio-dev.html
 https://docs.python.org/3.13/library/asyncio-eventloop.html
