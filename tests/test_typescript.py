@@ -1,4 +1,8 @@
-"""The self-tests for the TypeScript track. REVIEW_KOANS_CHAPTER=NN narrows them to one chapter."""
+"""The self-tests for the TypeScript track. REVIEW_KOANS_CHAPTER=NN narrows them to one chapter.
+
+A chapter filter skips the runtime suite (`npm run verify`), which no chapter changes: a change to
+typescript/support/ or typescript/verify/ must run this file unfiltered.
+"""
 
 import json
 import re
@@ -55,13 +59,13 @@ ALLOWLIST = ROOT / "tests" / "allowlist.txt"
 COURSE_FILES = files_under(TRACK_DIR, ("source", "checks", "traces"), (".ts",))
 OTHER_ZONE = {"TZ": "Pacific/Auckland", "LANG": "de_DE.UTF-8", "LC_ALL": "de_DE.UTF-8"}
 NETWORK = re.compile(
-    r"""["']node:(net|tls|http|https|http2|dgram|dns|child_process|worker_threads|cluster)["']"""
+    r"""["'](?:node:)?(net|tls|http|https|http2|dgram|dns|child_process|worker_threads|cluster)["']"""
     r"""|\bfetch\(|\bWebSocket\b|XMLHttpRequest|\brequire\("""
 )
 REAL_CLOCK = re.compile(
-    r"""\bDate\.now\(|new Date\(\)|performance\.now|process\.hrtime|\bIntl\b|toLocale\w*\(|process\.nextTick"""
-    r"""|setTimeout|setInterval|setImmediate|useRealTimers|\bAbortSignal\.timeout\b|["']node:timers(/promises)?["']"""
-    r"""|\blocaleCompare\((?![^\n]*,\s*["'])"""
+    r"""\bDate\.now\(|new Date\(\s*\)|\bnew Date\b(?!\s*\()|(?<![\w.$])Date\(\s*\)|performance\.now|process\.hrtime"""
+    r"""|\bIntl\b|toLocale\w*\(|process\.nextTick|setTimeout|setInterval|setImmediate|useRealTimers"""
+    r"""|\bAbortSignal\.timeout\b|["'](?:node:)?timers(?:/promises)?["']|\blocaleCompare\((?![^()\n]*,\s*["'])"""
 )
 VERDICT_MEDITATION = 'Read koans/review/{file}. Write "fine", or the line number of the bug.'
 FIX_MEDITATION = "Fix the bug in koans/review/{file} in place. The hidden checks name what still fails."
@@ -286,11 +290,15 @@ def test_each_guard_mutant_fails_as_hidden_case(case, review_run):
     assert earlier_are_ok(kinds, koan), kinds
 
 
-def same_code(lines: tuple[str, ...]) -> tuple[str, ...]:
-    return tuple(line.strip() for line in lines if line.strip())
+def same_code(lines: tuple[str, ...]) -> str:
+    return re.sub(r"\s+", "", "".join(lines))
 
 
 IN_SCOPE_REVIEWS = [file for file in REVIEWS if in_scope(file)]
+
+
+def test_halves_compare_without_whitespace():
+    assert same_code(("  return a*b",)) == same_code(("return a * b", ""))
 
 
 @pytest.mark.parametrize("file", IN_SCOPE_REVIEWS, ids=lambda f: case_id(f))
@@ -395,12 +403,21 @@ def test_no_network_or_processes_in_course_code():
     assert static_hits(COURSE_FILES, NETWORK) == []
 
 
-def test_offline_guard_is_active():
-    done = run_in_track(["npm", "run", "verify", "--", "guard", "--reporter=verbose"])
-    passed = {name for name in re.findall(r"^ +✓ verify/(\w+\.ts) > ", done.stdout, re.M)}
-    assert done.returncode == 0, done.stdout[-3000:]
-    assert passed == {"guard_test.ts", "guard_install_test.ts"}
-    assert re.search(r"Test Files +2 passed \(2\)", done.stdout), done.stdout[-3000:]
+@pytest.fixture(scope="module")
+def runtime_run() -> subprocess.CompletedProcess[str]:
+    if chapter_filter():
+        pytest.skip("the runtime suite is chapter-independent; run unfiltered after changing typescript/support/")
+    return run_in_track(["npm", "run", "verify", "--", "--reporter=verbose"])
+
+
+GUARD_FILES = {"guard_test.ts", "guard_install_test.ts"}
+
+
+def test_offline_guard_is_active(runtime_run):
+    passed = set(re.findall(r"^ +✓ verify/(\w+\.ts) > ", runtime_run.stdout, re.M))
+    failed = set(re.findall(r"^ +[×✗] verify/(\w+\.ts) > ", runtime_run.stdout, re.M))
+    assert GUARD_FILES <= passed, runtime_run.stdout[-3000:]
+    assert GUARD_FILES & failed == set(), runtime_run.stdout[-3000:]
 
 
 def test_no_real_clock_in_course_code():
@@ -413,10 +430,24 @@ def test_clock_ban_catches_each_form():
         "d.toLocaleDateString()", "process.nextTick(f)", "setTimeout(f, 0)", "setInterval(f, 1)", "setImmediate(f)",
         "vi.useRealTimers()", "AbortSignal.timeout(10)", 'import { setTimeout as wait } from "node:timers/promises"',
         "import timers from 'node:timers'", "a.localeCompare(b)", "names.sort((a, b) => a.localeCompare(b))",
+        'n.sort((a, b) => a.localeCompare(b)).join(", ")', '[a.localeCompare(b), "z"]', "const d = new Date",
+        "const s = Date()", 'import { scheduler } from "timers/promises"', "import { setTimeout } from 'timers'",
+        'import { scheduler } from "node:timers/promises"',
     ]
-    allowed = ['a.localeCompare(b, "en")', "new Date(\"2024-01-01T00:00:00Z\")", "new Date(2024, 0, 1)"]
+    allowed = [
+        'a.localeCompare(b, "en")', "new Date(\"2024-01-01T00:00:00Z\")", "new Date(2024, 0, 1)", "isDate(x)",
+        "x.toDate()", 'import { stamp } from "./timers.ts"',
+    ]
     assert [form for form in caught if not REAL_CLOCK.search(form)] == []
     assert [form for form in allowed if REAL_CLOCK.search(form)] == []
+
+
+def test_network_ban_catches_each_form():
+    caught = ['import net from "net"', "import http from 'http'", 'import { spawn } from "child_process"',
+              'import tls from "node:tls"', "fetch(url)", "new WebSocket(u)", 'require("fs")']
+    allowed = ['import { readFileSync } from "node:fs"', 'import assert from "node:assert/strict"', '"network"']
+    assert [form for form in caught if not NETWORK.search(form)] == []
+    assert [form for form in allowed if NETWORK.search(form)] == []
 
 
 # 11. Hygiene.
@@ -454,9 +485,8 @@ def test_no_personal_paths_in_tracked_files():
     assert personal_path_hits(scoped) == []
 
 
-def test_native_runtime_suite_passes():
-    done = run_in_track(["npm", "run", "verify"])
-    assert done.returncode == 0, done.stdout[-3000:]
+def test_native_runtime_suite_passes(runtime_run):
+    assert runtime_run.returncode == 0, runtime_run.stdout[-3000:]
 
 
 CHECKS_FILES = [p for p in sorted((TRACK_DIR / "checks").glob("*_checks.ts")) if in_scope(p.name)]
