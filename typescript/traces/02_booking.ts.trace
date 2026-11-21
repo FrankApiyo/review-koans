@@ -1,0 +1,16 @@
+exit 1
+--- stdout
+60
+--- stderr
+traces/02_booking.ts:8
+  return (booking.startsAt.getTime() - now.getTime()) / 60_000
+                           ^
+
+TypeError: booking.startsAt.getTime is not a function
+    at minutesUntil (traces/02_booking.ts:8:28)
+    at traces/02_booking.ts:14:13
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:639:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v25.9.0
