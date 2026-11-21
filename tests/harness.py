@@ -1,10 +1,13 @@
 """Track-neutral helpers for the self-tests: scope, review renders, verdicts and static scans."""
 
+import fcntl
 import hashlib
 import os
 import re
+import shutil
 import subprocess
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Iterator, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, Protocol
@@ -15,6 +18,8 @@ from dialects import ELIXIR, Dialect, dialect_for
 ROOT = Path(__file__).resolve().parent.parent
 CHAPTER_VARIABLE = "REVIEW_KOANS_CHAPTER"
 CHAPTER = re.compile(r"^(\d\d)_")
+STAGE_NAME = re.compile(r"[a-z][a-z0-9_]*")
+VARIANT_KEY = re.compile(r"v\d{4}")
 KOAN_START = ELIXIR.koan_head
 RENDERED_VERDICT = re.compile(
     r'verdict\("(?P<file>[^"\n]+)", (?P<answer>[^,\n]+), "(?P<digests>[^"\n]*)", "(?P<source>[^"\n]*)"\)'
@@ -287,3 +292,47 @@ def meditations(text: str, dialect: Dialect = ELIXIR) -> list[str | None]:
 
 def personal_path_hits(paths: Iterable[Path]) -> list[str]:
     return [path.relative_to(ROOT).as_posix() for path in paths if any(n.encode() in path.read_bytes() for n in PERSONAL)]
+
+
+Variants = Mapping[str, tuple[Mapping[str, str], Mapping[str, str]]]
+
+
+def plain_name(name: str) -> str:
+    if Path(name).name != name or name.startswith("."):
+        raise ValueError(f"staged file names are plain names, not {name!r}")
+    return name
+
+
+def _write_tree(target: Path, tests: Mapping[str, str], reviews: Mapping[str, str]) -> None:
+    (target / "review").mkdir(parents=True)
+    for file, text in tests.items():
+        (target / plain_name(file)).write_text(text, encoding="utf-8")
+    for file, text in reviews.items():
+        (target / "review" / plain_name(file)).write_text(text, encoding="utf-8")
+
+
+def stage_variants(variants_dir: Path, name: str, variants: Variants) -> str:
+    """Recreates <variants_dir>/<name>/ with one vNNNN/ folder per variant, each holding its tests and review/."""
+    if not STAGE_NAME.fullmatch(name):
+        raise ValueError(f"stage names are lower-case words, not {name!r}")
+    target = variants_dir / name
+    if target.exists():
+        shutil.rmtree(target)
+    target.mkdir(parents=True)
+    for key, (tests, reviews) in variants.items():
+        if not VARIANT_KEY.fullmatch(key):
+            raise ValueError(f"variant folders are named v0001 and up, not {key!r}")
+        _write_tree(target / key, tests, reviews)
+    return f"{variants_dir.name}/{name}"
+
+
+@contextmanager
+def variants_locked(variants_dir: Path) -> Iterator[None]:
+    """Holds <variants_dir>/.lock so concurrent runs take turns over the staged folders."""
+    variants_dir.mkdir(exist_ok=True)
+    with (variants_dir / ".lock").open("w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock, fcntl.LOCK_UN)

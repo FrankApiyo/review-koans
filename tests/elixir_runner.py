@@ -6,13 +6,11 @@ import shutil
 import subprocess
 from collections.abc import Mapping
 from dataclasses import dataclass
-from pathlib import Path
 
-from harness import ROOT
+from harness import ROOT, STAGE_NAME, plain_name
 
 ELIXIR = ROOT / "elixir"
 VARIANTS = ELIXIR / "_variants"
-STAGE_NAME = re.compile(r"[a-z][a-z0-9_]*")
 TEST_LINE = re.compile(r"^KOANS-TEST (?P<kind>\S+) (?P<path>\S+):(?P<line>\d+)$", re.M)
 RESULT_LINE = re.compile(r"^KOANS-RESULT (?P<kind>\S+)(?: (?P<path>\S+):(?P<line>\d+))?$", re.M)
 QUIET_OFFLINE = {"MIX_ENV": "test", "HEX_OFFLINE": "1", "NO_COLOR": "1"}
@@ -65,12 +63,6 @@ def koans_result(run: MixRun) -> KoansResult | None:
     return KoansResult(match["kind"], match["path"], line)
 
 
-def _plain_name(name: str) -> str:
-    if Path(name).name != name or name.startswith("."):
-        raise ValueError(f"staged file names are plain names, not {name!r}")
-    return name
-
-
 def stage(name: str, tests: Mapping[str, str], reviews: Mapping[str, str]) -> str:
     if not STAGE_NAME.fullmatch(name):
         raise ValueError(f"stage names are lower-case words, not {name!r}")
@@ -81,7 +73,7 @@ def stage(name: str, tests: Mapping[str, str], reviews: Mapping[str, str]) -> st
     helper = (ELIXIR / "source" / "test_helper.exs").read_text(encoding="utf-8")
     (target / "test_helper.exs").write_text(helper, encoding="utf-8")
     for file, text in tests.items():
-        (target / _plain_name(file)).write_text(text, encoding="utf-8")
+        (target / plain_name(file)).write_text(text, encoding="utf-8")
     for file, text in reviews.items():
-        (target / "review" / _plain_name(file)).write_text(text, encoding="utf-8")
+        (target / "review" / plain_name(file)).write_text(text, encoding="utf-8")
     return f"_variants/{name}"
