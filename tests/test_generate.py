@@ -908,6 +908,15 @@ def test_typescript_indented_calls_are_not_function_heads():
         "  get total(): number {",
         "  handle = async (e: Event) => {",
         "  static make(x: number) {",
+        "  m<T>(x: T): T {",
+        "export const f = <T,>(x: T) => {",
+        "const g = async <T>(x: T): Promise<T> => {",
+        "  async *items() {",
+        "  *items() {",
+        "  [Symbol.iterator]() {",
+        "  readonly handle = (e: Event) => {",
+        "  private readonly handle = async (e: Event) => {",
+        "  static #make<T>(x: T) {",
     ],
 )
 def test_typescript_function_heads(line):
@@ -963,3 +972,37 @@ def test_python_and_elixir_dialects_are_unchanged():
     heads = lambda d: (d.function_head.pattern, d.module_head.pattern, d.koan_head.pattern)
     assert heads(ELIXIR) == (r"^\s*(def|defp|defmacro|defmacrop)\b", r"^\s*defmodule\b", r'^\s*koan\s+"')
     assert heads(PYTHON) == (r"^\s*(async\s+)?def\b", r"^\s*class\b", r"^def test_\w+\(")
+
+
+def test_typescript_omission_in_a_generic_method_accepts_the_method_head():
+    src = "export class C {\n  m<T>(x: T): T {\n    const a = 1\n" + ts_fix("    ") + "    return a\n  }\n}\n"
+    assert render_review("o.ts", src, TYPESCRIPT).accepted == {3, 4, 2}
+
+
+def test_typescript_omission_in_a_generic_arrow_const_accepts_the_const_line():
+    src = "export const f = <T,>(x: T) => {\n  const a = 1\n" + ts_fix("  ") + "  return a\n}\n"
+    assert render_review("o.ts", src, TYPESCRIPT).accepted == {2, 3, 1}
+
+
+def test_typescript_omission_in_a_callback_accepts_the_callback_opener():
+    src = "export function f() {\n  setTimeout(() => {\n    const a = 1\n" + ts_fix("    ") + "    return a\n  })\n}\n"
+    assert render_review("o.ts", src, TYPESCRIPT).accepted == {3, 4, 2}
+
+
+@pytest.mark.parametrize("line", ["export abstract class C {", "export default class C {", "class C<T> {"])
+def test_typescript_class_heads(line):
+    assert TYPESCRIPT.module_head.match(line)
+
+
+def test_bare_generate_skips_tracks_without_a_source_folder(tmp_path, capsys):
+    for rel, content in PYTHON_TRACK.items():
+        path = tmp_path / "python" / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+    (tmp_path / "typescript").mkdir()
+    assert main([], root=tmp_path) == 0
+    assert (tmp_path / "python/koans/01_a_test.py").is_file()
+    assert main(["--check"], root=tmp_path) == 0
+    capsys.readouterr()
+    assert main(["typescript"], root=tmp_path) == 1
+    assert "typescript/source is not a directory" in capsys.readouterr().err

@@ -617,7 +617,7 @@ def main(argv: list[str] | None = None, root: Path = ROOT) -> int:
     parser.add_argument("--check", action="store_true")
     parser.add_argument("tracks", nargs="*")
     args = parser.parse_args(argv)
-    tracks = args.tracks or [name for name in DIALECTS if (root / name).is_dir()]
+    tracks = args.tracks or [name for name in DIALECTS if (root / name / "source").is_dir()]
     failed = False
     for track in tracks:
         try:

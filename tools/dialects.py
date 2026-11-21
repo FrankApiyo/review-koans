@@ -203,11 +203,14 @@ PYTHON = Dialect(
 
 TYPESCRIPT_FORBIDDEN = re.compile(r"[`/]")
 _NOT_A_HEAD = r"(?!(?:if|for|while|switch|catch|return)\b)"
-_MODIFIERS = r"(?:(?:static|public|private|protected|override)\s+)*"
+_MODIFIERS = r"(?:(?:static|public|private|protected|override|readonly)\s+)*"
+_MEMBER_NAME = r"(#?\w+|\[[^\]]+\])"
+_ARROW_START = r"=\s*(async\s*)?(<.*?>\s*)?(\(|\w+\s*=>)"
 TS_FUNCTION_HEAD = re.compile(
     r"^\s*(export\s+)?(default\s+)?(async\s+)?function\b"
-    r"|^\s*(export\s+)?(const|let)\s+\w+\s*(:[^=]*)?=\s*(async\s*)?(\(|\w+\s*=>)"
-    rf"|^\s+{_NOT_A_HEAD}{_MODIFIERS}(async\s+)?(get\s+|set\s+)?#?\w+\s*(=\s*(async\s*)?)?\(.*(\{{|=>)\s*$"
+    rf"|^\s*(export\s+)?(const|let)\s+\w+\s*(:[^=]*)?{_ARROW_START}"
+    rf"|^\s+{_NOT_A_HEAD}{_MODIFIERS}(async\s+)?(get\s+|set\s+)?(\*\s*)?{_MEMBER_NAME}\s*"
+    rf"((<.*>)?\s*\(|\??\s*(:[^=]*)?{_ARROW_START}).*(\{{|=>)\s*$"
 )
 _TYPESCRIPT_LESSON = re.compile(r"\A/\*\n(.*?)\n\*/", re.DOTALL)
 _TYPESCRIPT_MEDITATION = re.compile(r'^test\("((?:[^"\\]|\\.)*)",')
@@ -270,7 +273,7 @@ TYPESCRIPT = Dialect(
     fine='"fine"',
     code_blank=lambda _tag: "__blank()",
     function_head=TS_FUNCTION_HEAD,
-    module_head=re.compile(r"^\s*(export\s+)?(default\s+)?class\b"),
+    module_head=re.compile(r"^\s*(export\s+)?(default\s+)?(abstract\s+)?class\b"),
     find_value_end=_typescript_value_end,
     forbidden_in_value=TYPESCRIPT_FORBIDDEN,
     lesson=_typescript_lesson,
