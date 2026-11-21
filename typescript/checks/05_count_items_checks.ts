@@ -30,6 +30,10 @@ const negativeQuantity = (review: any): void => {
   throws(() => review.countItems(body([{ sku: "a", qty: 4 }, { sku: "b", qty: -1 }])))
 }
 
+const endlessQuantity = (review: any): void => {
+  throws(() => review.countItems('{"items":[{"sku":"a","qty":1e999}]}'))
+}
+
 export const CASES = [
   twin("whole-number quantities are summed, zero included", wholeQuantities),
   twin("an order with an empty list of items counts zero", noItems),
@@ -37,4 +41,5 @@ export const CASES = [
   exploit("a quantity sent as text throws", textQuantity),
   exploit("a fractional quantity throws", fractionalQuantity),
   exploit("a negative quantity throws", negativeQuantity),
+  exploit("a quantity too large to be a whole number throws", endlessQuantity),
 ]

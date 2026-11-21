@@ -16,6 +16,7 @@ const aheadOfUtc = (review: any): void => {
 
 const behindUtc = (review: any): void => {
   inZone("America/New_York", () => assert.deepEqual(localDay(review.dueDate("2026-03-15")), [2026, 3, 15]))
+  inZone("America/New_York", () => assert.deepEqual(localDay(review.dueDate("2026-04-15")), [2026, 4, 15]))
 }
 
 const yearEnd = (review: any): void => {

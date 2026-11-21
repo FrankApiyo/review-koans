@@ -6,8 +6,8 @@ cut down to a day; a type guard that checks less than its type promises.
 
 Why it bites: `as` is a promise to the compiler, not a check. At run time `JSON.parse` returns
 whatever the sender wrote: a quantity sent as text turns a sum into string joining, and a
-renamed key reads as `undefined`. `?.` gives `undefined` when anything on its left is missing,
-and one missing value equals another. `||` replaces every falsy value, so `0` and `""` get the
+renamed key reads as `undefined`. `?.` gives `undefined` when the value just before it is
+`null` or `undefined`, and one missing value equals another. `||` replaces every falsy value, so `0` and `""` get the
 default too; `??` replaces only `null` and `undefined`. A `Date` counts months from 0, and a
 day past the end of a month rolls into the next one. A date-only string is read as midnight
 UTC, while a date and time with no zone is read as local time. `toISOString` always writes
@@ -42,7 +42,7 @@ test("Fix the bug in koans/review/05_count_items.ts in place. The hidden checks 
 })
 
 test("Read koans/review/05_can_edit.ts. Write \"fine\", or the line number of the bug.", () => {
-  verdict("05_can_edit.ts", __, "6977d9c23b", "41ad8fddd3")
+  verdict("05_can_edit.ts", __, "6977d9c23b", "609bec5096")
 })
 
 test("Fix the bug in koans/review/05_can_edit.ts in place. The hidden checks name what still fails.", async () => {
