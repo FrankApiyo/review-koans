@@ -583,3 +583,65 @@ def test_learner_commands_are_frozen():
     assert package["engines"] == {"node": ">=24"}
     assert package["scripts"]["test"] == "vitest run"
     assert "bail:" in config and "KOANS_DIR" in config
+    section = readme_part("## The TypeScript track")
+    code_blocks = "\n".join(readme_blocks(section))
+    for command in SETUP_COMMANDS:
+        assert command in code_blocks, command
+    runtime = "\n".join(p.read_text(encoding="utf-8") for p in (TRACK_DIR / "support").glob("*.ts"))
+    for form in FOOTER_FORMS:
+        for piece in (p for p in re.split(r"\{\w+\}", form) if len(p) >= 10):
+            assert piece in runtime, piece
+            assert piece in section, piece
+
+
+README = ROOT / "README.md"
+TRACK_HEADING = "## The TypeScript track"
+SETUP_COMMANDS = ("cd typescript", "npm ci", "npm test", "npx vitest run koans/<file>", "npx vitest run koans/<file>:<line>")
+FOOTER_FORMS = (
+    'Replace __ with "fine", or the number of the line with the bug in {path}.',
+    "Not fine: {path} has a bug. Write the number of the line where it is.",
+    'Read {path} again: it is fine. Write "fine".',
+    "Not that line. Look again at {path}.",
+    "A hidden case still fails: {label}",
+    "{answered} of {total} koans answered. Run the whole suite for the rest.",
+    "All {total} koans pass. Start again with: git checkout -- koans/",
+)
+
+
+def readme_part(heading: str | None) -> str:
+    text = README.read_text(encoding="utf-8")
+    if heading is None:
+        return text.split("\n## ", 1)[0]
+    return re.search(rf"^{re.escape(heading)}\n.*?(?=^## |\Z)", text, re.S | re.M)[0]
+
+
+def readme_blocks(section: str) -> list[str]:
+    return re.findall(r"^```[^\n]*\n(.*?)^```", section, re.S | re.M)
+
+
+def koan_total() -> tuple[int, int]:
+    files = sorted((TRACK_DIR / "koans").glob("[0-9][0-9]_*_test.ts"))
+    return sum(len(koan_lines(f.read_text(encoding="utf-8"), TYPESCRIPT)) for f in files), len(files)
+
+
+def test_readme_counts_match_the_koans():
+    koans, chapters = koan_total()
+    intro, section = readme_part(None), readme_part(TRACK_HEADING)
+    assert f"The TypeScript track has {koans} koans in {chapters} chapters" in intro
+    totals = {total for _, total in re.findall(r"(\d+) of (\d+) koans", section)}
+    assert totals == {str(koans)}
+    assert f"All {koans} koans pass" in section
+
+
+def test_readme_first_footer_is_what_the_first_blank_prints():
+    text = (TRACK_DIR / "koans" / "00_how_review_koans_work_test.ts").read_text(encoding="utf-8")
+    first = koan_lines(text, TYPESCRIPT)[0]
+    blank = next(n for n, line in enumerate(text.splitlines(), 1) if n > first and BLANK.search(line))
+    expected = (
+        "Replace __ with the value that makes this true.\n"
+        f"{'-' * 31} The master says {'-' * 32}\n"
+        f"Meditate on koans/00_how_review_koans_work_test.ts:{blank}\n"
+        f"    {meditation(text, first, TYPESCRIPT)}\n"
+        f"0 of {koan_total()[0]} koans answered.\n"
+    )
+    assert expected in readme_blocks(readme_part(TRACK_HEADING))

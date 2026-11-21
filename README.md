@@ -11,7 +11,7 @@ The course trains four skills:
 
 Every exercise can fail. An unfilled blank fails, a wrong verdict fails, and a half-right fix fails.
 
-The Elixir track has 128 koans in 9 chapters (00 to 08), from processes and mailboxes through supervision, ETS, Ecto and LiveView. The Python track has 69 koans in 6 chapters (00 to 05), from shared mutable state through exceptions and asyncio to money, time, files and injection. The TypeScript track follows.
+The Elixir track has 128 koans in 9 chapters (00 to 08), from processes and mailboxes through supervision, ETS, Ecto and LiveView. The Python track has 69 koans in 6 chapters (00 to 05), from shared mutable state through exceptions and asyncio to money, time, files and injection. The TypeScript track has 70 koans in 6 chapters (00 to 05), from equality, numbers and sorting through references, `this`, async ordering and untrusted data to dates.
 
 `lessons/index.html` has every lesson in one page. Open it in a browser.
 
@@ -251,6 +251,122 @@ The hidden checks in `checks/` and the answers in `solutions/` are readable on d
 
 If you edit or reformat a review file before you answer its verdict, its line numbers move. A wrong line then adds a note that the file has changed, and `git diff` on it shows how.
 
+## The TypeScript track
+
+### Setup
+
+You need Node 24 or later and npm. The course is tested on Node 24 and 25, with Vitest 4.1.12. It uses no other test package.
+
+From the repo root (for example `~/review-koans`):
+
+```sh
+cd typescript
+npm ci
+```
+
+Everything after the install is offline. The koans start no processes and open no network connections, loopback included.
+
+### The loop
+
+Run the whole suite from `typescript/`:
+
+```sh
+npm test
+```
+
+It stops at the first koan that fails, and prints a footer that says where to work. A blank looks like this:
+
+```
+Replace __ with the value that makes this true.
+------------------------------- The master says --------------------------------
+Meditate on koans/00_how_review_koans_work_test.ts:36
+    A predict koan: the blank holds the value that makes the assertion true.
+0 of 70 koans answered.
+```
+
+Open the file and line after `Meditate on`, read the meditation, fill the blank, save, and run `npm test` again.
+
+There are three kinds of koan:
+
+- **Predict.** Replace `__` with the value that makes the assertion true.
+- **Review.** Read the module in `koans/review/`. Replace the `__` in the verdict with `"fine"`, or with the number of the line that holds the bug.
+- **Fix.** After a bug, the next koan has you fix it in place. Hidden checks run your fix.
+
+An unanswered verdict says:
+
+- `Replace __ with "fine", or the number of the line with the bug in koans/review/01_cart.ts.`
+
+A wrong verdict says why:
+
+- `Not fine: koans/review/01_cart.ts has a bug. Write the number of the line where it is.`
+- `Read koans/review/01_cart.ts again: it is fine. Write "fine".`
+- `Not that line. Look again at koans/review/01_cart.ts.`
+
+A fix koan names the file to change and the koan that checks it. A failing check shows its label, never the check's input or the answer:
+
+```
+A hidden case still fails: an ordinary discount
+------------------------------- The master says --------------------------------
+Write:        koans/review/00_discount.ts
+Exercised by: koans/00_how_review_koans_work_test.ts:44
+    Fix the bug in koans/review/00_discount.ts in place. The hidden checks name what still fails.
+2 of 70 koans answered.
+```
+
+Trace koans point to a real crash in `traces/`. Read it, then name the error and the file and line it came from.
+
+A syntax error or a bad import in a koan file stops the run before any koan. The footer names the file and the error. That is your typo.
+
+A fix that never returns, such as a loop or a promise chain that never stops, needs Ctrl-C to stop the run.
+
+If you run one file or one koan and it passes, the footer says how many koans are answered and asks you to run the whole suite for the rest:
+
+```
+3 of 70 koans answered. Run the whole suite for the rest.
+```
+
+When every koan passes, the footer changes:
+
+```
+-------------------------------- Enlightenment ---------------------------------
+All 70 koans pass. Start again with: git checkout -- koans/
+```
+
+### Starting over
+
+```sh
+git checkout -- koans/
+```
+
+This restores every blank.
+
+### Running one file or one koan
+
+```sh
+npx vitest run koans/<file>
+npx vitest run koans/<file>:<line>
+```
+
+`<file>` is a name such as `01_equality_numbers_and_sorting_test.ts`. `<line>` is the line of the koan's `test(` call, and only that koan runs.
+
+### Running from Neovim
+
+Start nvim in `typescript/`. [vim-test](https://github.com/vim-test/vim-test) runs Vitest in the folder nvim was started in.
+
+| vim-test       | Runs                             | In a terminal                    |
+| -------------- | -------------------------------- | -------------------------------- |
+| `:TestSuite`   | the whole suite                  | `npm test`                       |
+| `:TestFile`    | the file you are in              | `npx vitest run <file>`          |
+| `:TestNearest` | the single koan under the cursor | `npx vitest run <file>:<line>`   |
+
+Any other editor works too. Run the commands from a terminal.
+
+### Do not peek
+
+The hidden checks in `checks/` and the answers in `solutions/` are readable on disk. Don't read them before a real attempt.
+
+If you edit or reformat a review file before you answer its verdict, its line numbers move. A wrong line then adds a note that the file has changed, and `git diff` on it shows how.
+
 ## For maintainers
 
 `elixir/source/` is the one authored copy. The generator writes `elixir/koans/` and `elixir/solutions/` from it. The solutions build in their own folder, `elixir/_build_solutions`, so compiling them never disturbs the learner's build.
@@ -270,6 +386,7 @@ Then:
 .venv/bin/python tools/traces.py capture elixir     # re-run the trace programs and save their output
 .venv/bin/python tools/traces.py check elixir       # fail if a saved trace is out of date
 python3.13 tools/traces.py capture python           # re-run the Python trace programs and save their output
+.venv/bin/python tools/traces.py capture typescript # re-run the TypeScript trace programs (needs Node 25)
 .venv/bin/python tools/lessons.py                   # rebuild lessons/index.html
 .venv/bin/pytest tests/                             # the self-tests
 ```
@@ -279,6 +396,8 @@ The generator and trace tools use the Python standard library only. The commands
 `REVIEW_KOANS_CHAPTER=NN .venv/bin/pytest tests/test_elixir.py` runs the Elixir self-tests for one chapter.
 
 `REVIEW_KOANS_CHAPTER=NN .venv/bin/pytest tests/test_python.py` does the same for the Python track.
+
+`REVIEW_KOANS_CHAPTER=NN .venv/bin/pytest tests/test_typescript.py` does the same for the TypeScript track.
 
 ## Licence
 
