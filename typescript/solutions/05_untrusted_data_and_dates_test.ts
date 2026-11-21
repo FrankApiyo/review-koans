@@ -21,8 +21,9 @@ A common mistake: converting a value instead of checking it. `Number` and `parse
 into numbers and `parseInt` drops a fraction, so malformed data is summed as if it were good.
 `typeof` gives "object" for `null` and for arrays. Testing a date only east of UTC, where
 midnight UTC is still the same calendar day. `toLocaleDateString` writes the day in a format
-that changes with the machine's locale. In the greeting trace the crash is on line 9, but the
-fault is line 4, where the parsed body was called a `User` without being checked.
+that changes with the machine's locale. In the greeting trace the stack points at the line
+that reads the missing field, but the fault is line 4, where the parsed body was called a
+`User` without being checked.
 
 Read more: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse,
 https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining,
