@@ -19,7 +19,7 @@ label, never a raw value or the fix:
     Write:        koans/review/00_discount.ts
     Exercised by: koans/00_how_review_koans_work_test.ts:44
         Fix the bug in koans/review/00_discount.ts in place. The hidden checks name what still fails.
-    2 of 29 koans answered.
+    2 of 41 koans answered.
 
 The checks are readable in `checks/`, as the answers are in `solutions/`. Read them only after
 a real attempt; reading them first defeats the exercise.
